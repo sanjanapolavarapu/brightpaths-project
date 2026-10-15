@@ -960,12 +960,26 @@ function alignVolunteerCatalog(db: DatabaseSync) {
   ).run();
 }
 
+function databaseFile() {
+  const dir = path.join(process.cwd(), "data");
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+    fs.accessSync(dir, fs.constants.W_OK);
+    return path.join(dir, "brightpaths.sqlite");
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    // Vercel functions have a read-only project directory. /tmp is the only writable path,
+    // and it is wiped when a new instance starts, so data there does not last.
+    if (code === "EROFS" || code === "EACCES" || code === "EPERM") return "/tmp/brightpaths.sqlite";
+    throw error;
+  }
+}
+
 export function getDb() {
   if (!globalForDb.brightpathsDb) {
-    const dir = path.join(process.cwd(), "data");
-    fs.mkdirSync(dir, { recursive: true });
-    const db = new DatabaseSync(path.join(dir, "brightpaths.sqlite"));
+    const db = new DatabaseSync(databaseFile());
     db.exec("PRAGMA foreign_keys = ON");
+    db.exec("PRAGMA busy_timeout = 5000");
     db.exec(SCHEMA);
     const count = db.prepare("SELECT COUNT(*) AS n FROM users").get() as { n: number } | undefined;
     if (!count || Number(count.n) === 0) seed(db);
