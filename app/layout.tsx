@@ -1,9 +1,12 @@
 import type { Metadata } from "next";
-import { Fraunces, Source_Sans_3 } from "next/font/google";
+import { Montserrat } from "next/font/google";
 import "./globals.css";
 
-const sans = Source_Sans_3({ subsets: ["latin"], variable: "--font-sans" });
-const serif = Fraunces({ subsets: ["latin"], variable: "--font-serif" });
+const sans = Montserrat({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-sans",
+});
 
 export const metadata: Metadata = {
   title: { default: "Brightpaths volunteer portal", template: "%s · Brightpaths" },
@@ -14,8 +17,8 @@ export const dynamic = "force-dynamic";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body className={`${sans.variable} ${serif.variable}`}>
+    <html lang="en" className={sans.variable}>
+      <body>
         <a className="skip" href="#content">
           Skip to content
         </a>
