@@ -968,22 +968,43 @@ function databaseFile() {
     return path.join(dir, "brightpaths.sqlite");
   } catch (error) {
     const code = (error as NodeJS.ErrnoException).code;
-    // Vercel functions have a read-only project directory. /tmp is the only writable path,
-    // and it is wiped when a new instance starts, so data there does not last.
+    // Vercel’s project directory is read-only. /tmp is writable but does not last.
     if (code === "EROFS" || code === "EACCES" || code === "EPERM") return "/tmp/brightpaths.sqlite";
     throw error;
   }
 }
 
+function configure(db: DatabaseSync) {
+  db.exec("PRAGMA foreign_keys = ON");
+  db.exec("PRAGMA busy_timeout = 5000");
+  db.exec(SCHEMA);
+  const count = db.prepare("SELECT COUNT(*) AS n FROM users").get() as { n: number } | undefined;
+  if (!count || Number(count.n) === 0) seed(db);
+  return db;
+}
+
+function openDatabase() {
+  if (!process.env.VERCEL) return configure(new DatabaseSync(databaseFile()));
+
+  let fileDb: DatabaseSync | undefined;
+  try {
+    fileDb = new DatabaseSync(databaseFile());
+    return configure(fileDb);
+  } catch {
+    // A file path can still fail after the /tmp fallback (sqlite unable to open it).
+    // Memory is per instance, reseeded on startup, and not shared across instances.
+    try {
+      fileDb?.close();
+    } catch {
+      // The failed file connection may already be closed.
+    }
+    return configure(new DatabaseSync(":memory:"));
+  }
+}
+
 export function getDb() {
   if (!globalForDb.brightpathsDb) {
-    const db = new DatabaseSync(databaseFile());
-    db.exec("PRAGMA foreign_keys = ON");
-    db.exec("PRAGMA busy_timeout = 5000");
-    db.exec(SCHEMA);
-    const count = db.prepare("SELECT COUNT(*) AS n FROM users").get() as { n: number } | undefined;
-    if (!count || Number(count.n) === 0) seed(db);
-    globalForDb.brightpathsDb = db;
+    globalForDb.brightpathsDb = openDatabase();
   }
   alignVolunteerCatalog(globalForDb.brightpathsDb);
   return globalForDb.brightpathsDb;
