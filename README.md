@@ -1,12 +1,21 @@
 # Brightpaths volunteer portal
 
-A standalone portal for Brightpaths staff, volunteers, and interns. It covers applications, profile tags, event sign-up, hour tracking, short-staff alerts, and messages inside the portal.
+A portal for Brightpaths staff, volunteers, and interns. It covers applications, interests, shifts, hours, alerts, and messages inside the portal.
 
 This is separate from the Brightpaths website.
 
-## Run it
+## Run it locally
 
 Requires Node.js 22.13 or newer.
+
+Create `.env.local` in this folder. It is not stored in GitHub.
+
+```
+DATABASE_URL=postgresql://...
+SESSION_SECRET=a-long-random-string
+```
+
+`DATABASE_URL` is the Supabase pooler connection string (`pooler.supabase.com`). The direct database host does not connect from a host like Vercel. `SESSION_SECRET` signs the sign-in cookie. If it is missing, the app uses a fallback that is in the code, so set one before the site is public.
 
 ```bash
 npm install
@@ -15,21 +24,32 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-The database is created at `data/brightpaths.sqlite` the first time the app starts, with sample people and events. Delete that file and restart to load the sample data again.
+Records are in Supabase. They are not in a file in this folder.
 
 ## Handing it to Brightpaths
 
-Brightpaths should use a website link. GitHub stores the code and does not run the site, and the records should not stay on a personal laptop.
+Brightpaths uses the website link. GitHub has the code and does not run the site. Supabase holds the records and does not run the website.
 
-The records are in a Supabase database, on the free plan. That plan is $0 and includes 500 MB. If almost nobody uses the site for a week, Supabase pauses the database. Opening the Supabase project and choosing Resume brings the records back. The free plan does not save a spare copy by itself. Staff can still use **Save a copy** on Upkeep and download that file.
+The Supabase project is on the free plan: $0 and 500 MB. If almost nobody uses the site for about a week, Supabase pauses the database. Opening that project and choosing Resume brings the records back. The free plan does not keep an automatic backup.
 
-Supabase holds the records. It does not run the website. Brightpaths uses the website link and does not open Supabase.
+Put `DATABASE_URL` and `SESSION_SECRET` in the host’s settings (Vercel). Do not put them in GitHub. Do not put the Supabase service key in the site.
 
-Staff do the rest in the menu. **Website** changes the public homepage and the ways to help. **Upkeep** adds another staff login, changes a password, and saves a private copy of the records.
+Staff do the rest from the menu:
+
+- **Applications** reviews new people.
+- **People** is the current list. **Upload a spreadsheet** adds people who already volunteer. Staff type one temporary password and tell those people. The site does not email it.
+- **Events** and **Hours** are the calendar and the hour records. Hours are typed in by staff.
+- **Messages** stay in the portal. They are not sent as email or texts.
+- **Website** changes the homepage words and the ways to help.
+- **Upkeep** adds a staff login and changes a password. Add at least two staff logins. A person can change only their own password, and there is no forgot-password link.
+
+**Save a copy** on Upkeep writes a file on the computer running the site. On Vercel that file does not stay.
+
+The background check stored here is a status (not started, pending, approved, or expired). The site does not keep the check itself, a home address, a birth date, or an ID number.
 
 ## Sample sign-in
 
-Password for every sample account: `pathway`
+These accounts are practice data. The password for each one is `pathway`. The sample box is hidden when `NODE_ENV` is production, and those emails cannot sign in there.
 
 | Email | Who |
 | --- | --- |
@@ -40,4 +60,4 @@ Password for every sample account: `pathway`
 | luis@brightpaths.test | Alumni profile |
 | hannah@brightpaths.test | New application |
 
-Messages are delivered to inboxes in this portal. They are not sent through an outside email or phone service.
+The practice people, shifts, applications, hours, and messages should be removed in Supabase before real volunteers use the site. The portal has no delete button. Marking someone Inactive only hides them.
