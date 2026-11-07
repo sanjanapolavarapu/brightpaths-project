@@ -17,12 +17,12 @@ export default async function EventsPage({
   const match = /^(\d{4})-(\d{2})$/.exec(monthParam);
   const year = match ? Number(match[1]) : fallback.year;
   const month = match ? Number(match[2]) : fallback.month;
-  const events = listEvents();
+  const events = await listEvents();
   const upcoming = events.filter((event) => event.status === "open" && new Date(event.starts_at).getTime() >= Date.now());
 
   return (
     <div className="stack" id="content">
-      <PageHeader title="Events" lede="Shifts people can join. See who's coming, and which days still need a few more.">
+      <PageHeader title="Events">
         <Link className="btn" href="/admin/events/new">
           New event
         </Link>

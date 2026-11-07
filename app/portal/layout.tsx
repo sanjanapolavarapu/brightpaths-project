@@ -7,7 +7,7 @@ export default async function PortalLayout({ children }: { children: React.React
   const user = await requireUser();
   if (user.role === "admin") redirect("/admin");
   return (
-    <PortalShell user={user} unread={unreadCount(user.id, "message")}>
+    <PortalShell user={user} unread={await unreadCount(user.id, "message")}>
       {children}
     </PortalShell>
   );

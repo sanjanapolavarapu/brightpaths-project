@@ -21,16 +21,13 @@ export default async function ApplicationsPage({
   const params = await searchParams;
   const view = queryValue(params.view) || "progress";
   const current = views.find((item) => item.key === view) ?? views[0];
-  const applications = listApplications(current.statuses);
-  const counts = applicationCounts();
+  const applications = await listApplications(current.statuses);
+  const counts = await applicationCounts();
   const inProgress = counts.submitted + counts.interview + counts.background_check;
 
   return (
     <div id="content">
-      <PageHeader
-        title="Applications"
-        lede="People hoping to join. Walk each one from the first form through a yes or a kind no."
-      />
+      <PageHeader title="Applications" />
       <nav className="tabs">
         {views.map((item) => (
           <Link key={item.key} className={item.key === current.key ? "current" : ""} href={`/admin/applications?view=${item.key}`}>

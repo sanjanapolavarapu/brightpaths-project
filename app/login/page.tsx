@@ -25,16 +25,16 @@ export default async function LoginPage({
   const user = await getCurrentUser();
   if (user) redirect(homeFor(user));
   const params = await searchParams;
+  const showSamples = process.env.NODE_ENV !== "production";
   return (
     <>
       <PublicHeader>
         <Link href="/apply">Apply</Link>
       </PublicHeader>
       <main className="public-main stage" id="content">
-        <div className="two login-grid">
+        <div className={showSamples ? "two login-grid" : "login-grid"}>
           <section className="card stack">
-            <h1>Good to see you</h1>
-            <p className="muted">Sign in with the email and password you picked when you applied.</p>
+            <h1>Sign in</h1>
             <Flash error={queryValue(params.error)} />
             <form className="stack" action={loginAction}>
               <label className="field">
@@ -50,21 +50,21 @@ export default async function LoginPage({
               </button>
             </form>
           </section>
-          <section className="card stack">
-            <h2>Try a sample login</h2>
-            <p className="muted">
-              Made-up people, for exploring the portal. The password for each one is pathway.
-            </p>
-            <ul className="account-list">
-              {samples.map(([role, email, note]) => (
-                <li key={email}>
-                  <strong>{role}</strong>
-                  <code>{email}</code>
-                  <span>{note}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
+          {showSamples ? (
+            <section className="card stack">
+              <h2>Sample logins</h2>
+              <p className="muted">Password: pathway</p>
+              <ul className="account-list">
+                {samples.map(([role, email, note]) => (
+                  <li key={email}>
+                    <strong>{role}</strong>
+                    <code>{email}</code>
+                    <span>{note}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
         </div>
       </main>
     </>

@@ -16,30 +16,24 @@ export default async function PortalHome({
   const user = await requireUser();
   const params = await searchParams;
   const range = dateRange({ range: "month" });
-  const monthHours = hoursByPerson({ from: range.from, to: range.to, userId: user.id });
+  const monthHours = await hoursByPerson({ from: range.from, to: range.to, userId: user.id });
   const total = monthHours[0]?.hours ?? 0;
-  const application = getApplicationForUser(user.id);
-  const upcoming = participationFor(user.id).filter(
+  const application = await getApplicationForUser(user.id);
+  const upcoming = (await participationFor(user.id)).filter(
     (item) => item.status === "signed_up" && new Date(item.starts_at).getTime() >= Date.now(),
   );
-  const tagIds = tagIdsForUser(user.id);
-  const short = user.account_status === "active" ? shortEventsFor(user, tagIds) : [];
-  const suggested = suggestedEventsFor(user, tagIds);
+  const tagIds = await tagIdsForUser(user.id);
+  const short = user.account_status === "active" ? await shortEventsFor(user, tagIds) : [];
+  const suggested = await suggestedEventsFor(user, tagIds);
   const first = user.name.split(" ")[0];
-  const lede =
-    user.account_status === "applicant"
-      ? "Your application is moving. Here's the step it's on."
-      : user.account_status === "alumni" || user.account_status === "inactive"
-        ? "Your hours are saved. Look back anytime, or print a copy."
-        : "Shifts, hours, and notes from staff are all in this one spot.";
 
   return (
     <div className="stack" id="content">
-      <PageHeader title={`Hi, ${first}`} lede={lede} />
+      <PageHeader title={`Hello, ${first}`} />
       <Flash saved={queryValue(params.saved)} />
       {application && user.account_status === "applicant" ? (
         <section className="card stack">
-          <h2>Where your application stands</h2>
+          <h2>Application</h2>
           <div className="timeline">
             {steps.map((step, index) => (
               <span className={index <= steps.indexOf(application.status as (typeof steps)[number]) ? "on" : ""} key={step}>
@@ -51,11 +45,11 @@ export default async function PortalHome({
           <p>
             Current step: <Pill value={application.status}>{applicationLabel(application.status)}</Pill>
           </p>
-          <p className="muted">You can look through events now. Signing up opens after staff approve you.</p>
+          <p className="muted">Sign-up opens after approval.</p>
         </section>
       ) : null}
       {user.account_status === "alumni" || user.account_status === "inactive" ? (
-        <p className="banner info">This profile is archived. Hours are still here to review or print.</p>
+        <p className="banner info">This profile is archived. Hours are still here.</p>
       ) : null}
       <section className="stats">
         <article className="stat">
@@ -75,13 +69,12 @@ export default async function PortalHome({
             <div className="muted">{formatWhen(item.starts_at)}</div>
           </Link>
         ))}
-        {!upcoming.length ? <p className="muted">No upcoming shifts yet. The events page has open ones.</p> : null}
+        {!upcoming.length ? <p className="muted">No upcoming shifts.</p> : null}
         <Link href="/portal/hours">Look up your hours</Link>
       </section>
       {suggested.length ? (
         <section className="card stack">
-          <h2>Suggested for you</h2>
-          <p className="muted">These match your interests and the days you said you&apos;re free.</p>
+          <h2>Suggested shifts</h2>
           {suggested.map((event) => (
             <Link key={event.id} href={`/portal/events/${event.id}`}>
               {event.title} · {formatWhen(event.starts_at)}
@@ -91,8 +84,7 @@ export default async function PortalHome({
       ) : null}
       {short.length ? (
         <section className="card stack">
-          <h2>Still looking for people</h2>
-          <p className="muted">You qualify for these, and they&apos;re short in the next 7 days.</p>
+          <h2>Short this week</h2>
           {short.map((event) => (
             <Link key={event.id} href={`/portal/events/${event.id}`}>
               {event.title} · {formatWhen(event.starts_at)} · {event.signed_up} of {event.minimum_volunteers} needed

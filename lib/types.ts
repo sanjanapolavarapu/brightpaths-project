@@ -26,6 +26,7 @@ export type User = {
 export type Tag = {
   id: number;
   name: string;
+  requires_background: number;
 };
 
 export type PersonRow = User & {

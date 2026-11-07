@@ -18,7 +18,7 @@ export default async function PortalHoursPage({
     from: queryValue(params.from),
     to: queryValue(params.to),
   });
-  const rows = listHours({ userId: user.id, from: range.from, to: range.to }).map((row) => ({
+  const rows = (await listHours({ userId: user.id, from: range.from, to: range.to })).map((row) => ({
     ...row,
     person_name: undefined,
   }));
@@ -26,7 +26,7 @@ export default async function PortalHoursPage({
 
   return (
     <div className="stack" id="content">
-      <PageHeader title="Your hours" lede={`${range.label}. Print a record whenever you need one.`}>
+      <PageHeader title="Hours" lede={range.label}>
         <Link className="btn" href={certificate}>
           Print my hours
         </Link>

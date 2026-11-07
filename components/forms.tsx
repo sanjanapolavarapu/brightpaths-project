@@ -86,14 +86,12 @@ export function ApplyForm({ tags }: { tags: Tag[] }) {
       </fieldset>
       <fieldset>
         <legend>How are you interested in helping?</legend>
-        <p className="muted">
-          These match the ways to help on the Brightpaths volunteer page. Childcare includes a background check. No
-          formal experience is required.
-        </p>
+        <p className="muted">A box marked background check needs that check before those shifts.</p>
         <div className="checks">
           {tags.map((tag) => (
             <label className="check" key={tag.id}>
               <input type="checkbox" name="tag" value={tag.id} /> {tag.name}
+              {tag.requires_background ? " (background check)" : ""}
             </label>
           ))}
         </div>
@@ -105,7 +103,7 @@ export function ApplyForm({ tags }: { tags: Tag[] }) {
       <label className="field">
         <span>When can you usually be here?</span>
         <input name="availability" required placeholder="Weekday mornings, Saturday afternoons, or weekends" />
-        <p className="muted">Name the days and time of day. Open shifts that fit will show up as suggestions.</p>
+        <p className="muted">Days and time of day.</p>
       </label>
       <label className="field">
         <span>Comments</span>
@@ -192,7 +190,10 @@ export function EventForm({
         <input type="checkbox" name="background" value="1" defaultChecked={Boolean(event?.required_background_check)} />
         Require an approved background check
       </label>
-      <p className="muted">Childcare shifts always require an approved background check, even if this box is left off.</p>
+      <p className="muted">
+        A way to help marked as needing a background check always requires an approved one, even if this box is left
+        off.
+      </p>
       <fieldset>
         <legend>Required tags</legend>
         <div className="checks">
@@ -227,8 +228,7 @@ export function MessageComposer({
         <input key={id} type="hidden" name="tag" value={id} />
       ))}
       <p>
-        This will deliver to <strong>{recipientCount}</strong> {recipientCount === 1 ? "person" : "people"} in their portal inbox.
-        It is not sent through an outside email or phone service.
+        {recipientCount} {recipientCount === 1 ? "person" : "people"}.
       </p>
       <div className="checks">
         <label className="check">
@@ -249,7 +249,7 @@ export function MessageComposer({
         <textarea name="body" required maxLength={channel === "sms" ? 320 : 5000} />
       </label>
       <button className="btn" type="submit" disabled={!recipientCount}>
-        Deliver to portal inboxes
+        Send
       </button>
     </form>
   );

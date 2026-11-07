@@ -16,11 +16,11 @@ export default async function PortalEventPage({
 }) {
   const user = await requireUser();
   const { id } = await params;
-  const event = getEvent(Number(id));
+  const event = await getEvent(Number(id));
   if (!event) notFound();
   const query = await searchParams;
-  const signup = getSignup(event.id, user.id);
-  const issues = qualificationIssues(user, event, tagIdsForUser(user.id));
+  const signup = await getSignup(event.id, user.id);
+  const issues = qualificationIssues(user, event, await tagIdsForUser(user.id));
   const started = new Date(event.starts_at).getTime() < Date.now();
   const onRoster = signup && signup.status !== "cancelled";
 
@@ -42,7 +42,7 @@ export default async function PortalEventPage({
           {event.required_background_check ? <Pill value="approved">Background check required</Pill> : null}
         </div>
         <CapacityBar filled={event.signed_up} capacity={event.capacity} minimum={event.minimum_volunteers} />
-        <p className="muted">You'll get {event.hours_credit} hours once staff mark you attended. Thank you for considering it.</p>
+        <p className="muted">{event.hours_credit} hours after staff mark you attended.</p>
         {issues.map((issue) => (
           <p className="banner warn" key={issue}>
             {issue}

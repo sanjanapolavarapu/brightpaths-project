@@ -16,12 +16,12 @@ export default async function EventDetailPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { id } = await params;
-  const event = getEvent(Number(id));
+  const event = await getEvent(Number(id));
   if (!event) notFound();
   const query = await searchParams;
-  const roster = listSignups(event.id);
-  const tagMap = tagIdsForUsers(roster.map((person) => person.user_id));
-  const people = listPeople({ q: "", role: "", status: "", statuses: ["active"], tagId: 0, background: "" });
+  const roster = await listSignups(event.id);
+  const tagMap = await tagIdsForUsers(roster.map((person) => person.user_id));
+  const people = await listPeople({ q: "", role: "", status: "", statuses: ["active"], tagId: 0, background: "" });
   const short = event.status === "open" && new Date(event.starts_at).getTime() > Date.now() && event.signed_up < event.minimum_volunteers;
 
   return (
@@ -146,7 +146,7 @@ export default async function EventDetailPage({
         <summary>Edit event</summary>
         <div style={{ marginTop: "1rem" }}>
           <EventForm
-            tags={listTags()}
+            tags={await listTags()}
             event={{
               id: event.id,
               title: event.title,

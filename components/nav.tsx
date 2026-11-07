@@ -13,6 +13,8 @@ const adminLinks = [
   ["/admin/hours", "Hours"],
   ["/admin/messages", "Messages"],
   ["/admin/alerts", "Alerts"],
+  ["/admin/site", "Website"],
+  ["/admin/upkeep", "Upkeep"],
 ];
 
 const portalLinks = [

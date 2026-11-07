@@ -14,14 +14,12 @@ export default async function ProfilePage({
 }) {
   const user = await requireUser();
   const params = await searchParams;
-  const person = getPerson(user.id);
-  const tags = listTags().filter((tag) => tagIdsForUser(user.id).includes(tag.id));
+  const person = await getPerson(user.id);
+  const tagIds = await tagIdsForUser(user.id);
+  const tags = (await listTags()).filter((tag) => tagIds.includes(tag.id));
   return (
     <div className="stack" id="content">
-      <PageHeader
-        title="Your profile"
-        lede="Update your phone and when you're free. Staff look after your tags, role, and background-check status."
-      />
+      <PageHeader title="Profile" />
       <Flash error={queryValue(params.error)} saved={queryValue(params.saved)} />
       <section className="card stack">
         <div className="pills">
@@ -39,7 +37,7 @@ export default async function ProfilePage({
         </div>
       </section>
       <section className="card stack">
-        <h2>How we reach you</h2>
+        <h2>Phone</h2>
         <form className="stack" action={updateOwnProfileAction}>
           <label className="field">
             <span>Email</span>
@@ -52,7 +50,7 @@ export default async function ProfilePage({
           <label className="field">
             <span>Availability</span>
             <input name="availability" defaultValue={user.availability} placeholder="Weekday mornings, Saturday afternoons, or weekends" />
-            <p className="muted">Name the days and time of day. Suggested shifts use this.</p>
+            <p className="muted">Days and time of day.</p>
           </label>
           <h3>Change password</h3>
           <label className="field">

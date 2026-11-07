@@ -8,11 +8,11 @@ export const metadata = { title: "Involvement summary" };
 
 export default async function SummaryPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const person = getPerson(Number(id));
+  const person = await getPerson(Number(id));
   if (!person) notFound();
-  const hours = listHours({ userId: person.id });
-  const notes = listNotes(person.id);
-  const history = participationFor(person.id);
+  const hours = await listHours({ userId: person.id });
+  const notes = await listNotes(person.id);
+  const history = await participationFor(person.id);
   const total = hours.reduce((sum, entry) => sum + Number(entry.hours), 0);
 
   return (
@@ -65,10 +65,6 @@ export default async function SummaryPage({ params }: { params: Promise<{ id: st
           {note.body} <span className="muted">({note.author_name}, {formatWhen(note.created_at)})</span>
         </p>
       ))}
-      <p className="muted">
-        Prepared from the Brightpaths volunteer portal. Notes on this page are for staff. This is a reference sheet, not
-        a finished recommendation letter.
-      </p>
     </article>
   );
 }

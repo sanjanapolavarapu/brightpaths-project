@@ -11,7 +11,7 @@ export default async function ArchivePage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const params = await searchParams;
-  const people = listPeople({
+  const people = await listPeople({
     q: queryValue(params.q),
     role: queryValue(params.role),
     status: "",
@@ -21,13 +21,10 @@ export default async function ArchivePage({
   });
   return (
     <div className="stack" id="content">
-      <PageHeader
-        title="Archive"
-        lede="People who have stepped back. Their hours, interests, and private notes stay here for thank-yous and reference letters."
-      />
+      <PageHeader title="Archive" />
       <PeopleFilters
         action="/admin/archive"
-        tags={listTags()}
+        tags={await listTags()}
         showStatus={false}
         values={{
           q: queryValue(params.q),

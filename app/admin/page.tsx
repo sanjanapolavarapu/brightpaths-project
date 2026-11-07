@@ -15,19 +15,16 @@ export const metadata = { title: "Dashboard" };
 
 export default async function AdminHome() {
   const admin = await requireAdmin();
-  const stats = dashboardStats();
-  const short = refreshUnderstaffedAlerts();
-  const counts = applicationCounts();
-  const applications = listApplications(["submitted", "interview", "background_check"]).slice(0, 5);
-  const upcoming = upcomingEvents();
-  const alerts = listNotifications(admin.id).filter((alert) => !alert.read_at).slice(0, 4);
+  const stats = await dashboardStats();
+  const short = await refreshUnderstaffedAlerts();
+  const counts = await applicationCounts();
+  const applications = (await listApplications(["submitted", "interview", "background_check"])).slice(0, 5);
+  const upcoming = await upcomingEvents();
+  const alerts = (await listNotifications(admin.id)).filter((alert) => !alert.read_at).slice(0, 4);
 
   return (
     <div className="stack" id="content">
-      <PageHeader
-        title={`Hi, ${admin.name.split(" ")[0]}`}
-        lede="Applications waiting on a look, and shifts that are still short this week."
-      />
+      <PageHeader title={`Hello, ${admin.name.split(" ")[0]}`} />
       <section className="stats">
         <article className="stat">
           <span>Active volunteers</span>

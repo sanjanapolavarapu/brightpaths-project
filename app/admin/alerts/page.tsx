@@ -14,10 +14,10 @@ export default async function AlertsPage({
 }) {
   const admin = await requireAdmin();
   const params = await searchParams;
-  const alerts = listNotifications(admin.id);
+  const alerts = await listNotifications(admin.id);
   return (
     <div className="stack" id="content">
-      <PageHeader title="Alerts" lede="New applications, and shifts that are still short on people in the next 7 days.">
+      <PageHeader title="Alerts">
         <form action={markAlertReadAction}>
           <input type="hidden" name="all" value="1" />
           <button className="btn-ghost" type="submit">

@@ -17,13 +17,13 @@ export default async function AdminHoursPage({
     to: queryValue(params.to),
   });
   const personId = Number(queryValue(params.person)) || 0;
-  const totals = hoursByPerson({ from: range.from, to: range.to, userId: personId || undefined });
-  const rows = listHours({ from: range.from, to: range.to, userId: personId || undefined });
-  const people = listPeople({ q: "", role: "", status: "", statuses: [], tagId: 0, background: "" });
+  const totals = await hoursByPerson({ from: range.from, to: range.to, userId: personId || undefined });
+  const rows = await listHours({ from: range.from, to: range.to, userId: personId || undefined });
+  const people = await listPeople({ q: "", role: "", status: "", statuses: [], tagId: 0, background: "" });
 
   return (
     <div className="stack" id="content">
-      <PageHeader title="Hours" lede={`${range.label}. Look up one person, or everyone who gave time in these dates.`} />
+      <PageHeader title="Hours" lede={range.label} />
       <HoursToolbar
         path="/admin/hours"
         rangeKey={range.key}

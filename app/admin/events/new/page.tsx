@@ -4,12 +4,12 @@ import { listTags } from "@/lib/data";
 
 export const metadata = { title: "New event" };
 
-export default function NewEventPage() {
+export default async function NewEventPage() {
   return (
     <div className="stack" id="content">
-      <PageHeader title="New event" lede="Give the shift a name, how many people it needs, and who it's for." />
+      <PageHeader title="New event" />
       <section className="card">
-        <EventForm tags={listTags()} />
+        <EventForm tags={await listTags()} />
       </section>
     </div>
   );

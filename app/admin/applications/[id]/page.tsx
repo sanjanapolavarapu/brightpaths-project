@@ -17,10 +17,10 @@ export default async function ApplicationDetail({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { id } = await params;
-  const application = getApplication(Number(id));
+  const application = await getApplication(Number(id));
   if (!application) notFound();
   const query = await searchParams;
-  const tags = listTags();
+  const tags = await listTags();
   let interestNames: string[] = [];
   try {
     const ids = JSON.parse(application.interests) as number[];
@@ -45,7 +45,7 @@ export default async function ApplicationDetail({
           <Pill value={application.status}>{applicationLabel(application.status)}</Pill>
         </div>
         <p className="muted">Submitted {formatWhen(application.submitted_at)}</p>
-        <h2>Interest questionnaire</h2>
+        <h2>Application</h2>
         <p>
           <strong>Comments.</strong> {application.why_join || "None added."}
         </p>
@@ -69,11 +69,7 @@ export default async function ApplicationDetail({
         </div>
       </section>
       <section className="card stack">
-        <h2>Move this application</h2>
-        <p className="muted">
-          Approving turns on their account, sets volunteer or intern from this form, and copies their interests onto
-          their profile tags.
-        </p>
+        <h2>Status</h2>
         <form className="filters" action={updateApplicationAction}>
           <input type="hidden" name="id" value={application.id} />
           <label className="field">

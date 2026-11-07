@@ -4,9 +4,9 @@ import { refreshUnderstaffedAlerts, unreadCount } from "@/lib/data";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const user = await requireAdmin();
-  refreshUnderstaffedAlerts();
+  await refreshUnderstaffedAlerts();
   return (
-    <AdminShell user={user} unread={unreadCount(user.id)}>
+    <AdminShell user={user} unread={await unreadCount(user.id)}>
       {children}
     </AdminShell>
   );

@@ -18,7 +18,7 @@ export default async function CertificatePage({
     from: queryValue(params.from),
     to: queryValue(params.to),
   });
-  const rows = listHours({ userId: user.id, from: range.from, to: range.to });
+  const rows = await listHours({ userId: user.id, from: range.from, to: range.to });
   const total = rows.reduce((sum, row) => sum + Number(row.hours), 0);
   const period = range.from || range.to ? `${range.from ? formatDay(range.from) : "Start"} – ${range.to ? formatDay(range.to) : "today"}` : "All recorded hours";
 
@@ -64,10 +64,6 @@ export default async function CertificatePage({
           Date
         </div>
       </div>
-      <p className="muted">
-        This is a record of hours Brightpaths staff entered for you. It is a thank-you you can print, not a background
-        check or a letter of recommendation.
-      </p>
     </article>
   );
 }

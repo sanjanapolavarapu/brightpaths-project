@@ -188,6 +188,26 @@ button { cursor: pointer; }
   margin-bottom: 2rem;
 }
 .login-grid .card { padding: 1.35rem 1.4rem 1.45rem; }
+.login-grid:not(.two) { max-width: 32rem; }
+
+.site-form fieldset + fieldset {
+  margin-top: 0.35rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--line);
+}
+.site-form legend { font-size: 1.15rem; }
+.tag-line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 0.75rem;
+  align-items: end;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--line);
+}
+.tag-add { padding-top: 0.4rem; max-width: 32rem; }
+@media (max-width: 720px) {
+  .tag-line { grid-template-columns: 1fr; }
+}
 
 .app-shell { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; }
 .sidebar {
@@ -299,6 +319,7 @@ form.stack > .btn, form.stack > .btn-gold { justify-self: stretch; }
 .card { padding: 1rem 1.05rem; }
 .card + .card { margin-top: 0; }
 .list { display: grid; gap: 0.7rem; }
+.steps { margin: 0.2rem 0 0; padding-left: 1.2rem; display: grid; gap: 0.35rem; }
 .list a.row, .row-link {
   display: block;
   text-decoration: none;

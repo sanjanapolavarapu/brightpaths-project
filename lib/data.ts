@@ -24,19 +24,20 @@ function plain<T>(row: Record<string, unknown> | undefined) {
   return row ? ({ ...row } as T) : undefined;
 }
 
-function all<T>(sql: string, params: Sql[] = []) {
-  return getDb()
-    .prepare(sql)
-    .all(...params)
-    .map((row) => ({ ...row }) as T);
+async function all<T>(sql: string, params: Sql[] = []) {
+  const db = await getDb();
+  const rows = await db.prepare(sql).all(...params);
+  return rows.map((row) => ({ ...row }) as T);
 }
 
-function one<T>(sql: string, params: Sql[] = []) {
-  return plain<T>(getDb().prepare(sql).get(...params) as Record<string, unknown> | undefined);
+async function one<T>(sql: string, params: Sql[] = []) {
+  const db = await getDb();
+  return plain<T>((await db.prepare(sql).get(...params)) as Record<string, unknown> | undefined);
 }
 
-function run(sql: string, params: Sql[] = []) {
-  return Number(getDb().prepare(sql).run(...params).lastInsertRowid);
+async function run(sql: string, params: Sql[] = []) {
+  const db = await getDb();
+  return Number((await db.prepare(sql).run(...params)).lastInsertRowid);
 }
 
 const PERSON_SELECT = `
@@ -45,23 +46,35 @@ const PERSON_SELECT = `
   COALESCE((SELECT SUM(h.hours) FROM hours_entries h WHERE h.user_id = u.id), 0) AS hours_total
 `;
 
-export function listTags() {
-  return all<Tag>("SELECT id, name FROM tags ORDER BY name");
+export async function listTags() {
+  return await all<Tag>("SELECT id, name, requires_background FROM tags ORDER BY id");
 }
 
-export function getUser(id: number) {
-  return one<User>(
+export async function listStaff() {
+  return await all<Pick<User, "id" | "name" | "email" | "phone">>(
+    "SELECT id, name, email, phone FROM users WHERE role = 'admin' ORDER BY name",
+  );
+}
+
+export async function listSampleAccounts() {
+  return await all<Pick<User, "id" | "name" | "email">>(
+    "SELECT id, name, email FROM users WHERE email LIKE '%@brightpaths.test' ORDER BY email",
+  );
+}
+
+export async function getUser(id: number) {
+  return await one<User>(
     `SELECT id, email, name, phone, role, account_status, background_check, availability, created_at
      FROM users WHERE id = ?`,
     [id],
   );
 }
 
-export function emailTaken(email: string) {
-  return Boolean(one("SELECT id FROM users WHERE email = ?", [email.trim().toLowerCase()]));
+export async function emailTaken(email: string) {
+  return Boolean(await one("SELECT id FROM users WHERE email = ?", [email.trim().toLowerCase()]));
 }
 
-export function listPeople(filters: PeopleFilters) {
+export async function listPeople(filters: PeopleFilters) {
   const clauses = ["u.role != 'admin'"];
   const params: Sql[] = [];
   if (filters.q) {
@@ -90,7 +103,7 @@ export function listPeople(filters: PeopleFilters) {
     );
     params.push(filters.tagId);
   }
-  return all<PersonRow>(
+  return await all<PersonRow>(
     `SELECT ${PERSON_SELECT}
      FROM users u
      LEFT JOIN user_tags ut ON ut.user_id = u.id
@@ -102,8 +115,8 @@ export function listPeople(filters: PeopleFilters) {
   );
 }
 
-export function getPerson(id: number) {
-  return one<PersonRow>(
+export async function getPerson(id: number) {
+  return await one<PersonRow>(
     `SELECT ${PERSON_SELECT}
      FROM users u
      LEFT JOIN user_tags ut ON ut.user_id = u.id
@@ -114,16 +127,16 @@ export function getPerson(id: number) {
   );
 }
 
-export function tagIdsForUser(userId: number) {
-  return all<{ tag_id: number }>("SELECT tag_id FROM user_tags WHERE user_id = ?", [userId]).map(
+export async function tagIdsForUser(userId: number) {
+  return (await all<{ tag_id: number }>("SELECT tag_id FROM user_tags WHERE user_id = ?", [userId])).map(
     (row) => row.tag_id,
   );
 }
 
-export function tagIdsForUsers(userIds: number[]) {
+export async function tagIdsForUsers(userIds: number[]) {
   const map = new Map<number, number[]>();
   if (!userIds.length) return map;
-  const rows = all<{ user_id: number; tag_id: number }>(
+  const rows = await all<{ user_id: number; tag_id: number }>(
     `SELECT user_id, tag_id FROM user_tags WHERE user_id IN (${userIds.map(() => "?").join(",")})`,
     userIds,
   );
@@ -135,14 +148,14 @@ export function tagIdsForUsers(userIds: number[]) {
   return map;
 }
 
-export function listApplications(statuses?: ApplicationStatus[]) {
+export async function listApplications(statuses?: ApplicationStatus[]) {
   const params: Sql[] = [];
   let where = "";
   if (statuses?.length) {
     where = `WHERE a.status IN (${statuses.map(() => "?").join(",")})`;
     params.push(...statuses);
   }
-  return all<ApplicationRow>(
+  return await all<ApplicationRow>(
     `SELECT a.*, u.name, u.email, u.phone
      FROM applications a
      JOIN users u ON u.id = a.user_id
@@ -152,8 +165,8 @@ export function listApplications(statuses?: ApplicationStatus[]) {
   );
 }
 
-export function applicationCounts() {
-  const rows = all<{ status: ApplicationStatus; n: number }>(
+export async function applicationCounts() {
+  const rows = await all<{ status: ApplicationStatus; n: number }>(
     "SELECT status, COUNT(*) AS n FROM applications GROUP BY status",
   );
   const counts: Record<string, number> = {
@@ -167,8 +180,8 @@ export function applicationCounts() {
   return counts;
 }
 
-export function getApplication(id: number) {
-  return one<ApplicationRow>(
+export async function getApplication(id: number) {
+  return await one<ApplicationRow>(
     `SELECT a.*, u.name, u.email, u.phone
      FROM applications a
      JOIN users u ON u.id = a.user_id
@@ -177,8 +190,8 @@ export function getApplication(id: number) {
   );
 }
 
-export function getApplicationForUser(userId: number) {
-  return one<ApplicationRow>(
+export async function getApplicationForUser(userId: number) {
+  return await one<ApplicationRow>(
     `SELECT a.*, u.name, u.email, u.phone
      FROM applications a
      JOIN users u ON u.id = a.user_id
@@ -189,8 +202,8 @@ export function getApplicationForUser(userId: number) {
   );
 }
 
-export function listNotes(userId: number) {
-  return all<NoteRow>(
+export async function listNotes(userId: number) {
+  return await all<NoteRow>(
     `SELECT n.*, u.name AS author_name
      FROM notes n
      JOIN users u ON u.id = n.author_id
@@ -200,34 +213,34 @@ export function listNotes(userId: number) {
   );
 }
 
-export function listEvents() {
-  const events = all<EventRow>("SELECT * FROM events ORDER BY starts_at");
-  return events.map((event) => attachEvent(event));
+export async function listEvents() {
+  const events = await all<EventRow>("SELECT * FROM events ORDER BY starts_at");
+  return Promise.all(events.map((event) => attachEvent(event)));
 }
 
-export function getEvent(id: number) {
-  const event = one<EventRow>("SELECT * FROM events WHERE id = ?", [id]);
-  return event ? attachEvent(event) : undefined;
+export async function getEvent(id: number) {
+  const event = await one<EventRow>("SELECT * FROM events WHERE id = ?", [id]);
+  return event ? await attachEvent(event) : undefined;
 }
 
-function attachEvent(event: EventRow): EventDetail {
-  const tags = all<Tag>(
-    `SELECT t.id, t.name
+async function attachEvent(event: EventRow): Promise<EventDetail> {
+  const tags = await all<Tag>(
+    `SELECT t.id, t.name, t.requires_background
      FROM tags t
      JOIN event_tags et ON et.tag_id = t.id
      WHERE et.event_id = ?
      ORDER BY t.name`,
     [event.id],
   );
-  const signed = one<{ n: number }>(
+  const signed = await one<{ n: number }>(
     "SELECT COUNT(*) AS n FROM signups WHERE event_id = ? AND status = 'signed_up'",
     [event.id],
   );
   return { ...event, tags, signed_up: Number(signed?.n ?? 0) };
 }
 
-export function listSignups(eventId: number) {
-  return all<SignupRow>(
+export async function listSignups(eventId: number) {
+  return await all<SignupRow>(
     `SELECT s.id, s.event_id, s.user_id, s.status, s.created_at,
             u.name, u.email, u.phone, u.role, u.account_status, u.background_check
      FROM signups s
@@ -238,8 +251,8 @@ export function listSignups(eventId: number) {
   );
 }
 
-export function getSignup(eventId: number, userId: number) {
-  return one<SignupRow>(
+export async function getSignup(eventId: number, userId: number) {
+  return await one<SignupRow>(
     `SELECT s.id, s.event_id, s.user_id, s.status, s.created_at,
             u.name, u.email, u.phone, u.role, u.account_status, u.background_check
      FROM signups s
@@ -249,7 +262,7 @@ export function getSignup(eventId: number, userId: number) {
   );
 }
 
-export function listHours(input: { userId?: number; from?: string; to?: string }) {
+export async function listHours(input: { userId?: number; from?: string; to?: string }) {
   const clauses = ["1 = 1"];
   const params: Sql[] = [];
   if (input.userId) {
@@ -264,7 +277,7 @@ export function listHours(input: { userId?: number; from?: string; to?: string }
     clauses.push("h.served_on <= ?");
     params.push(input.to);
   }
-  return all<HoursRow>(
+  return await all<HoursRow>(
     `SELECT h.*, e.title AS event_title, u.name AS person_name
      FROM hours_entries h
      JOIN users u ON u.id = h.user_id
@@ -275,7 +288,7 @@ export function listHours(input: { userId?: number; from?: string; to?: string }
   );
 }
 
-export function hoursByPerson(input: { from?: string; to?: string; userId?: number }) {
+export async function hoursByPerson(input: { from?: string; to?: string; userId?: number }) {
   const clauses = ["1 = 1"];
   const params: Sql[] = [];
   if (input.from) {
@@ -290,7 +303,7 @@ export function hoursByPerson(input: { from?: string; to?: string; userId?: numb
     clauses.push("u.id = ?");
     params.push(input.userId);
   }
-  return all<{ id: number; name: string; role: User["role"]; account_status: User["account_status"]; hours: number }>(
+  return await all<{ id: number; name: string; role: User["role"]; account_status: User["account_status"]; hours: number }>(
     `SELECT u.id, u.name, u.role, u.account_status, COALESCE(SUM(h.hours), 0) AS hours
      FROM hours_entries h
      JOIN users u ON u.id = h.user_id
@@ -301,8 +314,8 @@ export function hoursByPerson(input: { from?: string; to?: string; userId?: numb
   );
 }
 
-export function participationFor(userId: number) {
-  return all<ParticipationRow>(
+export async function participationFor(userId: number) {
+  return await all<ParticipationRow>(
     `SELECT s.id, s.status, e.title, e.starts_at, e.location, e.status AS event_status, e.id AS event_id
      FROM signups s
      JOIN events e ON e.id = s.event_id
@@ -312,7 +325,7 @@ export function participationFor(userId: number) {
   );
 }
 
-export function findRecipients(filters: RecipientFilters) {
+export async function findRecipients(filters: RecipientFilters) {
   const clauses = ["u.role != 'admin'"];
   const params: Sql[] = [];
   clauses.push(
@@ -331,7 +344,7 @@ export function findRecipients(filters: RecipientFilters) {
     );
     params.push(...filters.tagIds, filters.tagIds.length);
   }
-  return all<User>(
+  return await all<User>(
     `SELECT u.id, u.email, u.name, u.phone, u.role, u.account_status, u.background_check, u.availability, u.created_at
      FROM users u
      WHERE ${clauses.join(" AND ")}
@@ -340,8 +353,8 @@ export function findRecipients(filters: RecipientFilters) {
   );
 }
 
-export function listMessages() {
-  return all<MessageRow>(
+export async function listMessages() {
+  return await all<MessageRow>(
     `SELECT m.*, u.name AS sender_name,
             (SELECT COUNT(*) FROM message_recipients r WHERE r.message_id = m.id) AS recipient_count
      FROM messages m
@@ -350,8 +363,8 @@ export function listMessages() {
   );
 }
 
-export function getMessage(id: number) {
-  return one<MessageRow>(
+export async function getMessage(id: number) {
+  return await one<MessageRow>(
     `SELECT m.*, u.name AS sender_name,
             (SELECT COUNT(*) FROM message_recipients r WHERE r.message_id = m.id) AS recipient_count
      FROM messages m
@@ -361,8 +374,8 @@ export function getMessage(id: number) {
   );
 }
 
-export function messageRecipients(messageId: number) {
-  return all<User>(
+export async function messageRecipients(messageId: number) {
+  return await all<User>(
     `SELECT u.id, u.email, u.name, u.phone, u.role, u.account_status, u.background_check, u.availability, u.created_at
      FROM users u
      JOIN message_recipients r ON r.user_id = u.id
@@ -372,8 +385,8 @@ export function messageRecipients(messageId: number) {
   );
 }
 
-export function messagesFor(userId: number) {
-  return all<MessageRow>(
+export async function messagesFor(userId: number) {
+  return await all<MessageRow>(
     `SELECT m.*, u.name AS sender_name
      FROM messages m
      JOIN message_recipients r ON r.message_id = m.id
@@ -384,74 +397,74 @@ export function messagesFor(userId: number) {
   );
 }
 
-export function listNotifications(userId: number) {
-  return all<NotificationRow>(
+export async function listNotifications(userId: number) {
+  return await all<NotificationRow>(
     "SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC",
     [userId],
   );
 }
 
-export function unreadCount(userId: number, kind?: string) {
+export async function unreadCount(userId: number, kind?: string) {
   const row = kind
-    ? one<{ n: number }>(
+    ? await one<{ n: number }>(
         "SELECT COUNT(*) AS n FROM notifications WHERE user_id = ? AND kind = ? AND read_at IS NULL",
         [userId, kind],
       )
-    : one<{ n: number }>(
+    : await one<{ n: number }>(
         "SELECT COUNT(*) AS n FROM notifications WHERE user_id = ? AND read_at IS NULL",
         [userId],
       );
   return Number(row?.n ?? 0);
 }
 
-export function markKindRead(userId: number, kind: string) {
-  getDb()
+export async function markKindRead(userId: number, kind: string) {
+  await (await getDb())
     .prepare("UPDATE notifications SET read_at = ? WHERE user_id = ? AND kind = ? AND read_at IS NULL")
     .run(nowIso(), userId, kind);
 }
 
-export function notifyUser(userId: number, kind: string, title: string, body: string, href: string) {
-  run(
+export async function notifyUser(userId: number, kind: string, title: string, body: string, href: string) {
+  await run(
     `INSERT INTO notifications (user_id, kind, title, body, href, created_at)
      VALUES (?, ?, ?, ?, ?, ?)`,
     [userId, kind, title, body, href, nowIso()],
   );
 }
 
-export function notifyAdmins(kind: string, title: string, body: string, href: string) {
-  const admins = all<{ id: number }>("SELECT id FROM users WHERE role = 'admin' AND account_status = 'active'");
-  for (const admin of admins) notifyUser(admin.id, kind, title, body, href);
+export async function notifyAdmins(kind: string, title: string, body: string, href: string) {
+  const admins = await all<{ id: number }>("SELECT id FROM users WHERE role = 'admin' AND account_status = 'active'");
+  for (const admin of admins) await notifyUser(admin.id, kind, title, body, href);
 }
 
-export function refreshUnderstaffedAlerts() {
-  const events = listEvents().filter((event) => {
+export async function refreshUnderstaffedAlerts() {
+  const events = (await listEvents()).filter((event) => {
     const start = new Date(event.starts_at).getTime();
     const soon = Date.now() + 7 * 24 * 60 * 60 * 1000;
     return event.status === "open" && start > Date.now() && start < soon && event.signed_up < event.minimum_volunteers;
   });
   const hrefs = new Set(events.map((event) => `/admin/events/${event.id}`));
-  const admins = all<{ id: number }>("SELECT id FROM users WHERE role = 'admin'");
+  const admins = await all<{ id: number }>("SELECT id FROM users WHERE role = 'admin'");
   const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString();
   for (const admin of admins) {
-    const existing = all<NotificationRow>(
+    const existing = await all<NotificationRow>(
       "SELECT * FROM notifications WHERE user_id = ? AND kind = 'understaffed' AND read_at IS NULL",
       [admin.id],
     );
     for (const note of existing) {
       if (!hrefs.has(note.href)) {
-        getDb().prepare("DELETE FROM notifications WHERE id = ?").run(note.id);
+        await (await getDb()).prepare("DELETE FROM notifications WHERE id = ?").run(note.id);
       }
     }
     for (const event of events) {
       const href = `/admin/events/${event.id}`;
-      const recent = one(
+      const recent = await one(
         `SELECT id FROM notifications
          WHERE user_id = ? AND kind = 'understaffed' AND href = ?
            AND (read_at IS NULL OR created_at > ?)`,
         [admin.id, href, threeDaysAgo],
       );
       if (recent) continue;
-      notifyUser(
+      await notifyUser(
         admin.id,
         "understaffed",
         "Event is short on volunteers",
@@ -463,39 +476,41 @@ export function refreshUnderstaffedAlerts() {
   return events;
 }
 
-export function dashboardStats() {
-  const count = (sql: string) => Number(one<{ n: number }>(sql)?.n ?? 0);
+export async function dashboardStats() {
+  const count = async (sql: string) => Number((await one<{ n: number }>(sql))?.n ?? 0);
   const monthStart = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}-01`;
-  const hours = one<{ n: number }>(
+  const hours = await one<{ n: number }>(
     "SELECT COALESCE(SUM(hours), 0) AS n FROM hours_entries WHERE served_on >= ?",
     [monthStart],
   );
   return {
-    volunteers: count("SELECT COUNT(*) AS n FROM users WHERE role = 'volunteer' AND account_status = 'active'"),
-    interns: count("SELECT COUNT(*) AS n FROM users WHERE role = 'intern' AND account_status = 'active'"),
-    applications: count(
+    volunteers: await count("SELECT COUNT(*) AS n FROM users WHERE role = 'volunteer' AND account_status = 'active'"),
+    interns: await count("SELECT COUNT(*) AS n FROM users WHERE role = 'intern' AND account_status = 'active'"),
+    applications: await count(
       "SELECT COUNT(*) AS n FROM applications WHERE status IN ('submitted', 'interview', 'background_check')",
     ),
     hoursThisMonth: Number(hours?.n ?? 0),
   };
 }
 
-export function upcomingEvents(limit = 6) {
-  return listEvents()
+export async function upcomingEvents(limit = 6) {
+  return (await listEvents())
     .filter((event) => event.status === "open" && new Date(event.starts_at).getTime() >= Date.now())
     .slice(0, limit);
 }
 
-export function suggestedEventsFor(user: User, tagIds: number[]) {
+export async function suggestedEventsFor(user: User, tagIds: number[]) {
   if (user.account_status !== "active" || user.role === "admin") return [];
   const taken = new Set(
-    all<{ event_id: number }>(
-      `SELECT event_id FROM signups
+    (
+      await all<{ event_id: number }>(
+        `SELECT event_id FROM signups
        WHERE user_id = ? AND status IN ('signed_up', 'waitlist', 'attended')`,
-      [user.id],
+        [user.id],
+      )
     ).map((row) => row.event_id),
   );
-  return listEvents().filter((event) => {
+  return (await listEvents()).filter((event) => {
     if (event.status !== "open" || new Date(event.starts_at).getTime() < Date.now()) return false;
     if (taken.has(event.id)) return false;
     if (qualificationIssues(user, event, tagIds).length) return false;
@@ -503,8 +518,8 @@ export function suggestedEventsFor(user: User, tagIds: number[]) {
   });
 }
 
-export function shortEventsFor(user: User, tagIds: number[]) {
-  return listEvents().filter((event) => {
+export async function shortEventsFor(user: User, tagIds: number[]) {
+  return (await listEvents()).filter((event) => {
     const start = new Date(event.starts_at).getTime();
     const soon = Date.now() + 7 * 24 * 60 * 60 * 1000;
     if (event.status !== "open" || start < Date.now() || start > soon) return false;
@@ -535,17 +550,17 @@ export function qualificationIssues(
   return issues;
 }
 
-export function replaceUserTags(userId: number, tagIds: number[]) {
-  const db = getDb();
-  db.prepare("DELETE FROM user_tags WHERE user_id = ?").run(userId);
-  const insert = db.prepare("INSERT INTO user_tags (user_id, tag_id) VALUES (?, ?)");
-  for (const tagId of tagIds) insert.run(userId, tagId);
+export async function replaceUserTags(userId: number, tagIds: number[]) {
+  const db = (await getDb());
+  await db.prepare("DELETE FROM user_tags WHERE user_id = ?").run(userId);
+  const insert = await db.prepare("INSERT INTO user_tags (user_id, tag_id) VALUES (?, ?)");
+  for (const tagId of tagIds) await insert.run(userId, tagId);
 }
 
-export function promoteWaitlist(eventId: number) {
-  const event = getEvent(eventId);
+export async function promoteWaitlist(eventId: number) {
+  const event = await getEvent(eventId);
   if (!event || event.signed_up >= event.capacity) return;
-  const next = one<{ id: number; user_id: number }>(
+  const next = await one<{ id: number; user_id: number }>(
     `SELECT id, user_id FROM signups
      WHERE event_id = ? AND status = 'waitlist'
      ORDER BY created_at ASC
@@ -553,8 +568,8 @@ export function promoteWaitlist(eventId: number) {
     [eventId],
   );
   if (!next) return;
-  getDb().prepare("UPDATE signups SET status = 'signed_up' WHERE id = ?").run(next.id);
-  notifyUser(
+  await (await getDb()).prepare("UPDATE signups SET status = 'signed_up' WHERE id = ?").run(next.id);
+  await notifyUser(
     next.user_id,
     "signup",
     "A spot opened up",
@@ -563,13 +578,13 @@ export function promoteWaitlist(eventId: number) {
   );
 }
 
-export function hasHoursForEvent(userId: number, eventId: number) {
+export async function hasHoursForEvent(userId: number, eventId: number) {
   return Boolean(
-    one("SELECT id FROM hours_entries WHERE user_id = ? AND event_id = ?", [userId, eventId]),
+    await one("SELECT id FROM hours_entries WHERE user_id = ? AND event_id = ?", [userId, eventId]),
   );
 }
 
-export function insertHours(input: {
+export async function insertHours(input: {
   userId: number;
   eventId: number | null;
   hours: number;
@@ -577,14 +592,14 @@ export function insertHours(input: {
   note: string;
   loggedBy: number;
 }) {
-  return run(
+  return await run(
     `INSERT INTO hours_entries (user_id, event_id, hours, served_on, note, logged_by, created_at)
      VALUES (?, ?, ?, ?, ?, ?, ?)`,
     [input.userId, input.eventId, input.hours, input.servedOn, input.note, input.loggedBy, nowIso()],
   );
 }
 
-export function createUser(input: {
+export async function createUser(input: {
   email: string;
   passwordHash: string;
   name: string;
@@ -592,7 +607,7 @@ export function createUser(input: {
   role: string;
   availability: string;
 }) {
-  return run(
+  return await run(
     `INSERT INTO users
       (email, password_hash, name, phone, role, account_status, background_check, availability, created_at)
      VALUES (?, ?, ?, ?, ?, 'applicant', 'not_started', ?, ?)`,
@@ -600,7 +615,7 @@ export function createUser(input: {
   );
 }
 
-export function createApplication(input: {
+export async function createApplication(input: {
   userId: number;
   role: string;
   why: string;
@@ -612,7 +627,7 @@ export function createApplication(input: {
   otherHelp: string;
 }) {
   const stamp = nowIso();
-  return run(
+  return await run(
     `INSERT INTO applications
       (user_id, role_interest, why_join, experience, availability, interests, volunteer_as, cadence, other_help, status, submitted_at, updated_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'submitted', ?, ?)`,

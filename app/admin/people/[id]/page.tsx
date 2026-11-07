@@ -3,16 +3,7 @@ import { notFound } from "next/navigation";
 import { Flash, PageHeader, Pill } from "@/components/ui";
 import { addNoteAction, logHoursAction, savePersonAction } from "@/lib/actions";
 import { getApplicationForUser, getPerson, listEvents, listHours, listNotes, listTags, participationFor, tagIdsForUser } from "@/lib/data";
-import {
-  backgroundLabel,
-  formatDay,
-  formatHours,
-  formatWhen,
-  queryValue,
-  roleLabel,
-  signupLabel,
-  statusLabel,
-} from "@/lib/format";
+import { formatDay, formatHours, formatWhen, queryValue, signupLabel } from "@/lib/format";
 
 export const metadata = { title: "Profile" };
 
@@ -24,16 +15,16 @@ export default async function PersonPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { id } = await params;
-  const person = getPerson(Number(id));
+  const person = await getPerson(Number(id));
   if (!person) notFound();
   const query = await searchParams;
-  const tags = listTags();
-  const selected = new Set(tagIdsForUser(person.id));
-  const notes = listNotes(person.id);
-  const hours = listHours({ userId: person.id });
-  const history = participationFor(person.id);
-  const application = getApplicationForUser(person.id);
-  const events = listEvents();
+  const tags = await listTags();
+  const selected = new Set(await tagIdsForUser(person.id));
+  const notes = await listNotes(person.id);
+  const hours = await listHours({ userId: person.id });
+  const history = await participationFor(person.id);
+  const application = await getApplicationForUser(person.id);
+  const events = await listEvents();
 
   return (
     <div className="stack" id="content">
@@ -44,11 +35,7 @@ export default async function PersonPage({
       </PageHeader>
       <Flash error={queryValue(query.error)} saved={queryValue(query.saved)} />
       <section className="card stack">
-        <h2>Qualifications and status</h2>
-        <p className="muted">
-          Interns and volunteers can switch roles here. Background check is a status for scheduling. Do not put document
-          numbers in notes.
-        </p>
+        <h2>Profile</h2>
         {application ? (
           <p>
             <Link href={`/admin/applications/${application.id}`}>View application</Link>
@@ -108,8 +95,8 @@ export default async function PersonPage({
         </form>
       </section>
       <section className="card stack">
-        <h2>Private notes</h2>
-        <p className="muted">Only staff can see notes. Use them for impact, interests, and reference letters.</p>
+        <h2>Notes</h2>
+        <p className="muted">Staff only. Don't include ID numbers.</p>
         {notes.map((note) => (
           <article className="note" key={note.id}>
             <p>{note.body}</p>
@@ -185,7 +172,7 @@ export default async function PersonPage({
         </form>
       </section>
       <section className="card stack">
-        <h2>Participation history</h2>
+        <h2>Shifts</h2>
         <div className="table-wrap">
           <table>
             <thead>
@@ -211,10 +198,6 @@ export default async function PersonPage({
           </table>
         </div>
         {!history.length ? <p className="muted">No events yet.</p> : null}
-        <p className="muted">
-          Current labels: {roleLabel(person.role)}, {statusLabel(person.account_status)}, background check{" "}
-          {backgroundLabel(person.background_check).toLowerCase()}.
-        </p>
       </section>
     </div>
   );

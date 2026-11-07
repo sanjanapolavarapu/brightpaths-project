@@ -5,11 +5,11 @@ import { formatWhen } from "@/lib/format";
 
 export const metadata = { title: "Messages" };
 
-export default function MessagesPage() {
-  const messages = listMessages();
+export default async function MessagesPage() {
+  const messages = await listMessages();
   return (
     <div className="stack" id="content">
-      <PageHeader title="Messages" lede="Write to a group. It lands in their portal, not in an outside email or text service.">
+      <PageHeader title="Messages">
         <Link className="btn" href="/admin/messages/new">
           New message
         </Link>

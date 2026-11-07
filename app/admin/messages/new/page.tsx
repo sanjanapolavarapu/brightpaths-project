@@ -12,7 +12,7 @@ export default async function NewMessagePage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const params = await searchParams;
-  const tags = listTags();
+  const tags = await listTags();
   const role = queryValue(params.role);
   const tagValues = params.tag;
   const tagIds = (Array.isArray(tagValues) ? tagValues : tagValues ? [tagValues] : [])
@@ -24,14 +24,11 @@ export default async function NewMessagePage({
     includeArchived: queryValue(params.archived) === "1",
     tagIds,
   };
-  const recipients = findRecipients(filters);
+  const recipients = await findRecipients(filters);
 
   return (
     <div className="stack" id="content">
-      <PageHeader
-        title="New message"
-        lede="Choose who should hear this, then write it. Use everyone, or only the people ready for a certain kind of day."
-      />
+      <PageHeader title="New message" />
       <section className="card stack">
         <h2>Who should get it</h2>
         <form className="stack" action="/admin/messages/new" method="get">

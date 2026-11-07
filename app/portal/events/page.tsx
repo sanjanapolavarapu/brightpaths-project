@@ -19,17 +19,14 @@ export default async function PortalEventsPage({
   const match = /^(\d{4})-(\d{2})$/.exec(monthParam);
   const year = match ? Number(match[1]) : fallback.year;
   const month = match ? Number(match[2]) : fallback.month;
-  const tagIds = tagIdsForUser(user.id);
-  const events = listEvents().filter((event) => event.status === "open" || event.status === "completed");
+  const tagIds = await tagIdsForUser(user.id);
+  const events = (await listEvents()).filter((event) => event.status === "open" || event.status === "completed");
   const upcoming = events.filter((event) => event.status === "open" && new Date(event.starts_at).getTime() >= Date.now());
-  const suggested = suggestedEventsFor(user, tagIds);
+  const suggested = await suggestedEventsFor(user, tagIds);
 
   return (
     <div className="stack" id="content">
-      <PageHeader
-        title="Find a shift"
-        lede="Suggested shifts fit your interests and availability. You can join when the tags and background check match."
-      />
+      <PageHeader title="Shifts" />
       <section className="card">
         <MonthCalendar
           year={year}
@@ -45,12 +42,7 @@ export default async function PortalEventsPage({
       </section>
       {suggested.length ? (
         <section className="card stack">
-          <h2>Suggested for you</h2>
-          <p className="muted">
-            {user.availability
-              ? `These fit “${user.availability}” and your interests.`
-              : "These fit your interests."}
-          </p>
+          <h2>Suggested</h2>
           {suggested.map((event) => (
             <Link key={event.id} href={`/portal/events/${event.id}`}>
               <strong>{event.title}</strong>
@@ -59,10 +51,10 @@ export default async function PortalEventsPage({
           ))}
         </section>
       ) : user.account_status === "active" ? (
-        <p className="banner info">No open shifts match your interests and availability right now. The full list is below.</p>
+        <p className="banner info">No suggested shifts right now.</p>
       ) : null}
       <section className="card">
-        <h2>Open right now</h2>
+        <h2>Open</h2>
         <div className="list">
           {upcoming.map((event) => {
             const issues = qualificationIssues(user, event, tagIds);
@@ -71,7 +63,7 @@ export default async function PortalEventsPage({
                 <strong>{event.title}</strong>
                 <div className="muted">{formatWhen(event.starts_at)} · {event.location}</div>
                 <CapacityBar filled={event.signed_up} capacity={event.capacity} minimum={event.minimum_volunteers} />
-                <div className="muted">{issues.length ? issues[0] : "You're a fit for this one."}</div>
+                {issues.length ? <div className="muted">{issues[0]}</div> : null}
               </Link>
             );
           })}
