@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { attendanceDecision, loginError, signupDecision } from "./rules.ts";
+import { validPhone } from "./form.ts";
+import { attendanceDecision, interestIds, loginError, qualificationIssues, signupDecision } from "./rules.ts";
 import { requireSessionSecret } from "./session-secret.ts";
+
+const childcare = { id: 2, name: "Childcare", requires_background: 1 };
 
 const future = Date.now() + 60_000;
 const past = Date.now() - 60_000;
@@ -116,12 +119,53 @@ test("a waitlisted person can take a spot that opens", () => {
   assert.deepEqual(moved, { ok: true, status: "signed_up" });
 });
 
+test("someone who already attended cannot sign up again", () => {
+  const again = signupDecision({
+    status: "open",
+    startsAt: future,
+    now: Date.now(),
+    blocked: false,
+    existingStatus: "attended",
+    signedUp: 0,
+    capacity: 2,
+  });
+  assert.equal(again.error, "already");
+});
+
+test("a shift signup checks approval, background check, and tags", () => {
+  const person = { role: "volunteer" as const, account_status: "active" as const, background_check: "approved" as const };
+  const shift = { required_background_check: 1, tags: [childcare] };
+  assert.equal(qualificationIssues(person, shift, [2]).length, 0);
+  assert.match(
+    qualificationIssues({ ...person, account_status: "applicant" }, shift, [2])[0],
+    /approve your application/,
+  );
+  assert.match(
+    qualificationIssues({ ...person, background_check: "pending" }, shift, [2])[0],
+    /background check/,
+  );
+  assert.match(qualificationIssues(person, shift, [])[0], /Childcare/);
+});
+
+test("saved interests ignore junk values", () => {
+  assert.deepEqual(interestIds("[1, 2, 0, -3, 4.5]"), [1, 2]);
+  assert.deepEqual(interestIds("not json"), []);
+  assert.deepEqual(interestIds('{"id":1}'), []);
+});
+
+test("a phone number needs 10 to 15 digits", () => {
+  assert.equal(validPhone("706-555-0101"), true);
+  assert.equal(validPhone("555"), false);
+  assert.equal(validPhone(""), false);
+});
+
 test("attendance records hours only for attended, and ignores a cancellation", () => {
   assert.deepEqual(attendanceDecision("signed_up", "attended"), { ok: true, recordHours: true });
   assert.deepEqual(attendanceDecision("signed_up", "no_show"), { ok: true, recordHours: false });
   assert.deepEqual(attendanceDecision("attended", "signed_up"), { ok: true, recordHours: false });
   assert.deepEqual(attendanceDecision("cancelled", "attended"), { ok: false });
   assert.deepEqual(attendanceDecision("signed_up", "waitlist"), { ok: false });
+  assert.deepEqual(attendanceDecision("", "attended"), { ok: false });
 });
 
 test("sign-in requires SESSION_SECRET", () => {

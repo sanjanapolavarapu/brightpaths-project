@@ -15,13 +15,12 @@ function plain<T>(row: Record<string, unknown> | undefined) {
   return row ? ({ ...row } as T) : undefined;
 }
 
-// Off on this computer. The hosted site turns these on with SHOW_SAMPLE_LOGINS=1 while people are testing.
+// Practice accounts appear only when SHOW_SAMPLE_LOGINS is 1.
 export function sampleLoginsOpen() {
   return process.env.SHOW_SAMPLE_LOGINS === "1";
 }
 
-// The cookie holds the email, an expiry, and a signature. Any server with
-// SESSION_SECRET can check it, so sign-in does not depend on a database row.
+// The cookie stores the email, when it expires, and a signature made with SESSION_SECRET.
 
 function sessionSecret() {
   return requireSessionSecret();

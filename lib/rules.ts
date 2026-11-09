@@ -1,3 +1,35 @@
+export function qualificationIssues(
+  user: { role: string; account_status: string; background_check: string },
+  event: { required_background_check: number; tags: { id: number; name: string }[] },
+  tagIds: number[],
+) {
+  const issues: string[] = [];
+  if (user.role === "admin") issues.push("Staff accounts don't take shifts. Thanks for keeping an eye on them.");
+  if (user.account_status === "applicant") {
+    issues.push("You can sign up once staff approve your application. Thanks for waiting.");
+  } else if (user.account_status !== "active") {
+    issues.push("This profile is resting, so new shifts are closed. Your hours are still here.");
+  }
+  if (event.required_background_check && user.background_check !== "approved") {
+    issues.push("This shift needs an approved background check first.");
+  }
+  const missing = event.tags.filter((tag) => !tagIds.includes(tag.id));
+  if (missing.length) {
+    issues.push(`This one is for people tagged ${missing.map((tag) => tag.name).join(", ")}. Ask staff if that should be on your profile.`);
+  }
+  return issues;
+}
+
+export function interestIds(raw: string) {
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((id): id is number => typeof id === "number" && Number.isInteger(id) && id > 0);
+  } catch {
+    return [];
+  }
+}
+
 export function loginError(email: string, samplesOpen: boolean, matched: boolean) {
   if (!samplesOpen && email.endsWith("@brightpaths.test")) return "sample" as const;
   if (!matched) return "credentials" as const;

@@ -151,7 +151,7 @@ CREATE TABLE IF NOT EXISTS notifications (
 `;
 
 async function seed(db: Db) {
-  // Postgres returns the new id when the insert says RETURNING id.
+  // Adds RETURNING id so the new row number comes back.
   const run = async (sql: string, ...params: Array<string | number | bigint | null>) =>
     Number((await db.prepare(`${sql.trim()} RETURNING id`).run(...params)).lastInsertRowid);
   const password = bcrypt.hashSync("pathway", 10);
@@ -1063,8 +1063,8 @@ async function openDatabase() {
   const pool = globalForDb.brightpathsPool;
   if (!globalForDb.brightpathsReady) {
     const db = new Db(pool);
-    // The hosted database is already set up. Rebuilding it on every cold start
-    // holds the shared pool and drops new sign-ins.
+    // On the live site, skip table setup when accounts already exist.
+    // Setting the tables up again uses up the few database connections.
     const skipSetup = process.env.NODE_ENV === "production" && (await databaseAlreadyLive(db));
     if (!skipSetup) {
       await configure(db);

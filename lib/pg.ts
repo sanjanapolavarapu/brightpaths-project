@@ -9,8 +9,7 @@ function pieces(query: string) {
     .filter((part) => part.length > 0);
 }
 
-// Runs the SQL it is given. Placeholders are $1, $2, and so on.
-// An insert that needs the new id includes RETURNING id.
+// Placeholder numbers in the SQL are $1, $2, and so on.
 export class Db {
   constructor(private client: Client) {}
 

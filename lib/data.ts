@@ -1,5 +1,8 @@
 import { getDb } from "./db";
 import { matchesAvailability, nowIso } from "./format";
+import { qualificationIssues } from "./rules";
+
+export { interestIds, qualificationIssues } from "./rules";
 import type {
   ApplicationRow,
   ApplicationStatus,
@@ -42,7 +45,7 @@ function slot(params: Sql[], value: Sql) {
 
 async function run(sql: string, params: Sql[] = []) {
   const db = await getDb();
-  // Postgres returns the new id when the insert says RETURNING id.
+  // Adds RETURNING id so the new row number comes back.
   const statement = /\bRETURNING\b/.test(sql) ? sql : `${sql.trim()} RETURNING id`;
   return Number((await db.prepare(statement).run(...params)).lastInsertRowid);
 }
@@ -509,38 +512,6 @@ export async function shortEventsFor(user: User, tagIds: number[]) {
     if (event.signed_up >= event.minimum_volunteers) return false;
     return qualificationIssues(user, event, tagIds).length === 0;
   });
-}
-
-export function qualificationIssues(
-  user: Pick<User, "role" | "account_status" | "background_check">,
-  event: Pick<EventDetail, "required_background_check" | "tags">,
-  tagIds: number[],
-) {
-  const issues: string[] = [];
-  if (user.role === "admin") issues.push("Staff accounts don't take shifts. Thanks for keeping an eye on them.");
-  if (user.account_status === "applicant") {
-    issues.push("You can sign up once staff approve your application. Thanks for waiting.");
-  } else if (user.account_status !== "active") {
-    issues.push("This profile is resting, so new shifts are closed. Your hours are still here.");
-  }
-  if (event.required_background_check && user.background_check !== "approved") {
-    issues.push("This shift needs an approved background check first.");
-  }
-  const missing = event.tags.filter((tag) => !tagIds.includes(tag.id));
-  if (missing.length) {
-    issues.push(`This one is for people tagged ${missing.map((tag) => tag.name).join(", ")}. Ask staff if that should be on your profile.`);
-  }
-  return issues;
-}
-
-export function interestIds(raw: string) {
-  try {
-    const parsed = JSON.parse(raw) as unknown;
-    if (!Array.isArray(parsed)) return [];
-    return parsed.filter((id): id is number => typeof id === "number" && Number.isInteger(id) && id > 0);
-  } catch {
-    return [];
-  }
 }
 
 export async function replaceUserTags(userId: number, tagIds: number[]) {

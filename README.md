@@ -28,7 +28,7 @@ Records are in Supabase. They are not in a file in this folder.
 
 ## Sample sign-in
 
-These accounts are practice data. The password for each one is `pathway`. The sample box is hidden when `NODE_ENV` is production, and those emails cannot sign in there.
+These accounts are practice data. The password for each one is `pathway`. The sample box and these emails stay off unless `SHOW_SAMPLE_LOGINS` is `1`.
 
 | Email | Who |
 | --- | --- |
