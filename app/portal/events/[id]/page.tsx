@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { CapacityBar, Flash, PageHeader, Pill } from "@/components/ui";
-import { cancelSignupAction, signupAction } from "@/lib/actions";
+import { cancelSignupAction, signupAction } from "@/lib/actions/events";
 import { requireUser } from "@/lib/auth";
 import { getEvent, getSignup, qualificationIssues, tagIdsForUser } from "@/lib/data";
 import { formatWhen, queryValue, signupLabel } from "@/lib/format";

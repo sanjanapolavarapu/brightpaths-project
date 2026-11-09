@@ -151,8 +151,9 @@ CREATE TABLE IF NOT EXISTS notifications (
 `;
 
 async function seed(db: Db) {
+  // Postgres returns the new id when the insert says RETURNING id.
   const run = async (sql: string, ...params: Array<string | number | bigint | null>) =>
-    Number((await db.prepare(sql).run(...params)).lastInsertRowid);
+    Number((await db.prepare(`${sql.trim()} RETURNING id`).run(...params)).lastInsertRowid);
   const password = bcrypt.hashSync("pathway", 10);
   const created = nowIso();
 
@@ -160,7 +161,7 @@ async function seed(db: Db) {
   try {
     const tagId: Record<string, number> = {};
     for (const name of SEED_TAGS) {
-      tagId[name] = await run("INSERT INTO tags (name, requires_background) VALUES (?, ?)", name, name === "Childcare" ? 1 : 0);
+      tagId[name] = await run("INSERT INTO tags (name, requires_background) VALUES ($1, $2)", name, name === "Childcare" ? 1 : 0);
     }
 
     const addUser = async (input: {
@@ -176,7 +177,7 @@ async function seed(db: Db) {
       await run(
         `INSERT INTO users
           (email, password_hash, name, phone, role, account_status, background_check, availability, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
         input.email,
         password,
         input.name,
@@ -190,7 +191,7 @@ async function seed(db: Db) {
 
     const tagUser = async (userId: number, names: string[]) => {
       for (const name of names) {
-        await db.prepare("INSERT INTO user_tags (user_id, tag_id) VALUES (?, ?)").run(userId, tagId[name]);
+        await db.prepare("INSERT INTO user_tags (user_id, tag_id) VALUES ($1, $2)").run(userId, tagId[name]);
       }
     };
 
@@ -308,7 +309,7 @@ async function seed(db: Db) {
       return await run(
         `INSERT INTO applications
           (user_id, role_interest, why_join, experience, availability, interests, volunteer_as, cadence, status, submitted_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
         userId,
         role,
         why,
@@ -410,7 +411,7 @@ async function seed(db: Db) {
 
     const addNote = async (userId: number, body: string, daysAgo: number) =>
       await run(
-        "INSERT INTO notes (user_id, author_id, body, created_at) VALUES (?, ?, ?, ?)",
+        "INSERT INTO notes (user_id, author_id, body, created_at) VALUES ($1, $2, $3, $4)",
         userId,
         staff,
         body,
@@ -455,7 +456,7 @@ async function seed(db: Db) {
       const id = await run(
         `INSERT INTO events
           (title, description, location, starts_at, ends_at, capacity, minimum_volunteers, hours_credit, required_background_check, status, created_by, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
         input.title,
         input.description,
         input.location,
@@ -470,7 +471,7 @@ async function seed(db: Db) {
         created,
       );
       for (const name of input.tags) {
-        await db.prepare("INSERT INTO event_tags (event_id, tag_id) VALUES (?, ?)").run(id, tagId[name]);
+        await db.prepare("INSERT INTO event_tags (event_id, tag_id) VALUES ($1, $2)").run(id, tagId[name]);
       }
       return id;
     };
@@ -620,7 +621,7 @@ async function seed(db: Db) {
 
     const signup = async (eventId: number, userId: number, status: string, daysAgo: number) =>
       await run(
-        "INSERT INTO signups (event_id, user_id, status, created_at) VALUES (?, ?, ?, ?)",
+        "INSERT INTO signups (event_id, user_id, status, created_at) VALUES ($1, $2, $3, $4)",
         eventId,
         userId,
         status,
@@ -647,7 +648,7 @@ async function seed(db: Db) {
     const hours = async (userId: number, eventId: number, amount: number, servedOn: string, note: string) =>
       await run(
         `INSERT INTO hours_entries (user_id, event_id, hours, served_on, note, logged_by, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
         userId,
         eventId,
         amount,
@@ -670,7 +671,7 @@ async function seed(db: Db) {
 
     const childcareMessage = await run(
       `INSERT INTO messages (channel, subject, body, filter_summary, sent_by, sent_at)
-       VALUES (?, ?, ?, ?, ?, ?)`,
+       VALUES ($1, $2, $3, $4, $5, $6)`,
       "email",
       "Childcare help needed this week",
       "Parenting class childcare still has open spots. It is limited to people tagged for childcare with an approved background check. Sign in to the portal if you can take a shift.",
@@ -678,14 +679,14 @@ async function seed(db: Db) {
       staff,
       isoDaysFromNow(-1, 8),
     );
-    await db.prepare("INSERT INTO message_recipients (message_id, user_id) VALUES (?, ?)").run(
+    await db.prepare("INSERT INTO message_recipients (message_id, user_id) VALUES ($1, $2)").run(
       childcareMessage,
       maya,
     );
 
     const fairMessage = await run(
       `INSERT INTO messages (channel, subject, body, filter_summary, sent_by, sent_at)
-       VALUES (?, ?, ?, ?, ?, ?)`,
+       VALUES ($1, $2, $3, $4, $5, $6)`,
       "sms",
       "",
       "Brightpaths resource fair still has open spots. Sign in to the volunteer portal to claim one.",
@@ -694,7 +695,7 @@ async function seed(db: Db) {
       isoDaysFromNow(-2, 16),
     );
     for (const person of [maya, andre, elena, priya]) {
-      await db.prepare("INSERT INTO message_recipients (message_id, user_id) VALUES (?, ?)").run(
+      await db.prepare("INSERT INTO message_recipients (message_id, user_id) VALUES ($1, $2)").run(
         fairMessage,
         person,
       );
@@ -711,7 +712,7 @@ async function seed(db: Db) {
     ) =>
       await run(
         `INSERT INTO notifications (user_id, kind, title, body, href, read_at, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
         userId,
         kind,
         title,
@@ -750,7 +751,7 @@ async function seed(db: Db) {
 async function columnNames(db: Db, table: string) {
   const rows = (await db
     .prepare(
-      "SELECT column_name AS name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = ?",
+      "SELECT column_name AS name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = $1",
     )
     .all(table)) as { name: string }[];
   return new Set(rows.map((column) => column.name));
@@ -758,24 +759,24 @@ async function columnNames(db: Db, table: string) {
 
 async function retag(db: Db, fromId: number, toId: number) {
   await db.prepare(
-    `INSERT OR IGNORE INTO user_tags (user_id, tag_id)
-     SELECT user_id, ? FROM user_tags WHERE tag_id = ?`,
+    `INSERT INTO user_tags (user_id, tag_id)
+     SELECT user_id, $1 FROM user_tags WHERE tag_id = $2 ON CONFLICT DO NOTHING`,
   ).run(toId, fromId);
-  await db.prepare("DELETE FROM user_tags WHERE tag_id = ?").run(fromId);
+  await db.prepare("DELETE FROM user_tags WHERE tag_id = $1").run(fromId);
   await db.prepare(
-    `INSERT OR IGNORE INTO event_tags (event_id, tag_id)
-     SELECT event_id, ? FROM event_tags WHERE tag_id = ?`,
+    `INSERT INTO event_tags (event_id, tag_id)
+     SELECT event_id, $1 FROM event_tags WHERE tag_id = $2 ON CONFLICT DO NOTHING`,
   ).run(toId, fromId);
-  await db.prepare("DELETE FROM event_tags WHERE tag_id = ?").run(fromId);
-  await db.prepare("DELETE FROM tags WHERE id = ?").run(fromId);
+  await db.prepare("DELETE FROM event_tags WHERE tag_id = $1").run(fromId);
+  await db.prepare("DELETE FROM tags WHERE id = $1").run(fromId);
 }
 
 async function renameTag(db: Db, from: string, to: string) {
-  const source = await db.prepare("SELECT id FROM tags WHERE name = ?").get(from) as { id: number } | undefined;
+  const source = await db.prepare("SELECT id FROM tags WHERE name = $1").get(from) as { id: number } | undefined;
   if (!source) return;
-  const target = await db.prepare("SELECT id FROM tags WHERE name = ?").get(to) as { id: number } | undefined;
+  const target = await db.prepare("SELECT id FROM tags WHERE name = $1").get(to) as { id: number } | undefined;
   if (!target) {
-    await db.prepare("UPDATE tags SET name = ? WHERE id = ?").run(to, source.id);
+    await db.prepare("UPDATE tags SET name = $1 WHERE id = $2").run(to, source.id);
     return;
   }
   if (target.id !== source.id) await retag(db, source.id, target.id);
@@ -802,10 +803,10 @@ async function ensureExampleShift(
   const staff = await db.prepare("SELECT id FROM users WHERE role = 'admin' ORDER BY id LIMIT 1").get() as
     | { id: number }
     | undefined;
-  const tag = await db.prepare("SELECT id FROM tags WHERE name = ?").get(input.tag) as { id: number } | undefined;
+  const tag = await db.prepare("SELECT id FROM tags WHERE name = $1").get(input.tag) as { id: number } | undefined;
   if (!start || !end || !staff || !tag) return;
 
-  const existing = await db.prepare("SELECT id, starts_at FROM events WHERE title = ?").get(input.title) as
+  const existing = await db.prepare("SELECT id, starts_at FROM events WHERE title = $1").get(input.title) as
     | { id: number; starts_at: string }
     | undefined;
   if (!existing) {
@@ -814,7 +815,8 @@ async function ensureExampleShift(
         await db.prepare(
           `INSERT INTO events
           (title, description, location, starts_at, ends_at, capacity, minimum_volunteers, hours_credit, required_background_check, status, created_by, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', ?, ?)`,
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'open', $10, $11)
+         RETURNING id`,
         ).run(
           input.title,
           input.description,
@@ -830,16 +832,16 @@ async function ensureExampleShift(
         )
       ).lastInsertRowid,
     );
-    await db.prepare("INSERT INTO event_tags (event_id, tag_id) VALUES (?, ?)").run(id, tag.id);
+    await db.prepare("INSERT INTO event_tags (event_id, tag_id) VALUES ($1, $2)").run(id, tag.id);
     return;
   }
 
   const signed = await db
-    .prepare("SELECT COUNT(*) AS n FROM signups WHERE event_id = ? AND status != 'cancelled'")
+    .prepare("SELECT COUNT(*) AS n FROM signups WHERE event_id = $1 AND status != 'cancelled'")
     .get(existing.id) as { n: number };
   if (new Date(existing.starts_at).getTime() < Date.now() && Number(signed.n) === 0) {
     await db.prepare(
-      "UPDATE events SET starts_at = ?, ends_at = ?, status = 'open', required_background_check = ? WHERE id = ?",
+      "UPDATE events SET starts_at = $1, ends_at = $2, status = 'open', required_background_check = $3 WHERE id = $4",
     ).run(start, end, input.background, existing.id);
   }
 }
@@ -943,12 +945,12 @@ async function alignVolunteerCatalog(db: Db) {
   await renameTag(db, "Office & admin", "First Steps bags");
   await renameTag(db, "Yard work", "Donation drives");
   await renameTag(db, "Community education", "Family Resource Closet");
-  const childcare = await db.prepare("SELECT id FROM tags WHERE name = ?").get("Childcare") as { id: number } | undefined;
-  const parenting = await db.prepare("SELECT id FROM tags WHERE name = ?").get("Parenting classes") as { id: number } | undefined;
+  const childcare = await db.prepare("SELECT id FROM tags WHERE name = $1").get("Childcare") as { id: number } | undefined;
+  const parenting = await db.prepare("SELECT id FROM tags WHERE name = $1").get("Parenting classes") as { id: number } | undefined;
   if (childcare && parenting) await retag(db, parenting.id, childcare.id);
 
   const retitle = async (from: string, title: string, description: string) => {
-    await db.prepare("UPDATE events SET title = ?, description = ? WHERE title = ?").run(title, description, from);
+    await db.prepare("UPDATE events SET title = $1, description = $2 WHERE title = $3").run(title, description, from);
   };
   await retitle(
     "Office: family resource packets",
@@ -966,17 +968,17 @@ async function alignVolunteerCatalog(db: Db) {
     "Staff a Brightpaths table and talk with families at a community event.",
   );
   await retitle("Packet prep", "First Steps bag prep", "Assembled First Steps bags in the office.");
-  await db.prepare("UPDATE events SET description = ? WHERE title = ?").run(
+  await db.prepare("UPDATE events SET description = $1 WHERE title = $2").run(
     "Greet families and hand out First Steps welcome materials.",
     "First Steps welcome table",
   );
-  await db.prepare("UPDATE events SET description = ? WHERE title = ?").run(
+  await db.prepare("UPDATE events SET description = $1 WHERE title = $2").run(
     "Keep children engaged while parents are in class. No formal experience is required. This shift needs an approved background check.",
     "Parenting class childcare",
   );
-  await db.prepare("UPDATE hours_entries SET note = ? WHERE note = ?").run("Donation drive", "Yard day");
-  await db.prepare("UPDATE hours_entries SET note = ? WHERE note = ?").run("Community event table", "Education table");
-  await db.prepare("UPDATE hours_entries SET note = ? WHERE note = ?").run("First Steps bags", "Packet prep");
+  await db.prepare("UPDATE hours_entries SET note = $1 WHERE note = $2").run("Donation drive", "Yard day");
+  await db.prepare("UPDATE hours_entries SET note = $1 WHERE note = $2").run("Community event table", "Education table");
+  await db.prepare("UPDATE hours_entries SET note = $1 WHERE note = $2").run("First Steps bags", "Packet prep");
   await db.prepare(
     `UPDATE applications SET cadence = 'once', volunteer_as = 'individual'
      WHERE user_id = (SELECT id FROM users WHERE email = 'hannah@brightpaths.test')`,
@@ -996,7 +998,7 @@ function dataDirectory() {
 }
 
 async function seedLive(db: Db) {
-  const insertTag = await db.prepare("INSERT INTO tags (name, requires_background) VALUES (?, ?)");
+  const insertTag = await db.prepare("INSERT INTO tags (name, requires_background) VALUES ($1, $2)");
   for (const name of SEED_TAGS) await insertTag.run(name, name === "Childcare" ? 1 : 0);
   const email = process.env.INITIAL_ADMIN_EMAIL?.trim().toLowerCase() ?? "";
   const password = process.env.INITIAL_ADMIN_PASSWORD ?? "";
@@ -1004,7 +1006,7 @@ async function seedLive(db: Db) {
   await db.prepare(
     `INSERT INTO users
       (email, password_hash, name, phone, role, account_status, background_check, availability, created_at)
-     VALUES (?, ?, 'Staff', '', 'admin', 'active', 'not_started', '', ?)`,
+     VALUES ($1, $2, 'Staff', '', 'admin', 'active', 'not_started', '', $3)`,
   ).run(email, bcrypt.hashSync(password, 10), nowIso());
 }
 
@@ -1043,28 +1045,58 @@ async function configure(db: Db) {
   return db;
 }
 
+async function databaseAlreadyLive(db: Db) {
+  try {
+    const row = (await db.prepare("SELECT 1 AS ok FROM users LIMIT 1").get()) as { ok: number } | undefined;
+    return Boolean(row);
+  } catch (error) {
+    const code = typeof error === "object" && error && "code" in error ? String((error as { code: unknown }).code) : "";
+    if (code === "42P01") return false;
+    throw error;
+  }
+}
+
 async function openDatabase() {
   const url = process.env.DATABASE_URL;
   if (!url) throw new Error("DATABASE_URL is not set");
   if (!globalForDb.brightpathsPool) globalForDb.brightpathsPool = openPool(url);
   const pool = globalForDb.brightpathsPool;
   if (!globalForDb.brightpathsReady) {
-    const connection = await pool.reserve();
-    try {
-      const db = new Db(connection as unknown as ReturnType<typeof openPool>);
+    const db = new Db(pool);
+    // The hosted database is already set up. Rebuilding it on every cold start
+    // holds the shared pool and drops new sign-ins.
+    const skipSetup = process.env.NODE_ENV === "production" && (await databaseAlreadyLive(db));
+    if (!skipSetup) {
       await configure(db);
       await alignVolunteerCatalog(db);
-    } finally {
-      connection.release();
     }
     globalForDb.brightpathsReady = true;
   }
   return new Db(pool);
 }
 
+function resetPool() {
+  const pool = globalForDb.brightpathsPool;
+  globalForDb.brightpathsOpen = undefined;
+  globalForDb.brightpathsPool = undefined;
+  globalForDb.brightpathsReady = false;
+  if (pool) void pool.end({ timeout: 1 });
+}
+
 export async function getDb() {
-  if (!globalForDb.brightpathsOpen) globalForDb.brightpathsOpen = openDatabase();
-  return globalForDb.brightpathsOpen;
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      if (!globalForDb.brightpathsOpen) globalForDb.brightpathsOpen = openDatabase();
+      return await globalForDb.brightpathsOpen;
+    } catch (error) {
+      lastError = error;
+      resetPool();
+      const message = error instanceof Error ? error.message : "";
+      if (!message.includes("Connection closed")) throw error;
+    }
+  }
+  throw lastError;
 }
 
 const BACKUP_NAME = /^brightpaths-\d{8}-\d{6}\.json$/;

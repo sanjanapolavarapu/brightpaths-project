@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { SiteForm } from "@/components/site-editor";
 import { Flash, PageHeader } from "@/components/ui";
-import { saveTagAction } from "@/lib/actions";
+import { saveTagAction } from "@/lib/actions/upkeep";
 import { listTags } from "@/lib/data";
 import { queryValue } from "@/lib/format";
 import { getSite } from "@/lib/site";

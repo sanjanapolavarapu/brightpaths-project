@@ -2,8 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { PublicHeader } from "@/components/public-header";
 import { Flash } from "@/components/ui";
-import { loginAction } from "@/lib/actions";
-import { getCurrentUser, homeFor } from "@/lib/auth";
+import { loginAction } from "@/lib/actions/session";
+import { getCurrentUser, homeFor, sampleLoginsOpen } from "@/lib/auth";
 import { queryValue } from "@/lib/format";
 
 export const metadata = { title: "Sign in" };
@@ -25,7 +25,7 @@ export default async function LoginPage({
   const user = await getCurrentUser();
   if (user) redirect(homeFor(user));
   const params = await searchParams;
-  const showSamples = process.env.NODE_ENV !== "production";
+  const showSamples = sampleLoginsOpen();
   return (
     <>
       <PublicHeader>

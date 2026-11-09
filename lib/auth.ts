@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getDb } from "./db";
+import { requireSessionSecret } from "./session-secret";
 import type { User } from "./types";
 
 const COOKIE = "bp_session";
@@ -14,12 +15,16 @@ function plain<T>(row: Record<string, unknown> | undefined) {
   return row ? ({ ...row } as T) : undefined;
 }
 
-// Vercel runs each request on its own server, and the SQLite file on that
-// server is not shared. A session row written at sign-in is invisible to the
-// next request, which looks like an immediate sign-out. The cookie itself
-// carries the account and a signature, so any server can check it.
+// Off on this computer. The hosted site turns these on with SHOW_SAMPLE_LOGINS=1 while people are testing.
+export function sampleLoginsOpen() {
+  return process.env.SHOW_SAMPLE_LOGINS === "1";
+}
+
+// The cookie holds the email, an expiry, and a signature. Any server with
+// SESSION_SECRET can check it, so sign-in does not depend on a database row.
+
 function sessionSecret() {
-  return process.env.SESSION_SECRET || "brightpaths-portal-session-v1";
+  return requireSessionSecret();
 }
 
 function sign(payload: string) {
@@ -63,7 +68,7 @@ export async function getCurrentUser() {
   if (!session) return null;
   const db = await getDb();
   return (
-    plain<User>((await db.prepare(`SELECT ${USER_COLUMNS} FROM users WHERE email = ?`).get(session.email)) as Record<string, unknown> | undefined) ??
+    plain<User>((await db.prepare(`SELECT ${USER_COLUMNS} FROM users WHERE email = $1`).get(session.email)) as Record<string, unknown> | undefined) ??
     null
   );
 }
@@ -114,7 +119,7 @@ export async function verifyLogin(email: string, password: string) {
   const db = await getDb();
   const row = plain<User & { password_hash: string | null }>(
     (await db
-      .prepare(`SELECT ${USER_COLUMNS}, password_hash FROM users WHERE email = ?`)
+      .prepare(`SELECT ${USER_COLUMNS}, password_hash FROM users WHERE email = $1`)
       .get(email.trim().toLowerCase())) as Record<string, unknown> | undefined,
   );
   if (!row?.password_hash) return null;

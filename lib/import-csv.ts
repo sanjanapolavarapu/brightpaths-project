@@ -41,6 +41,7 @@ function blocked(key: string) {
 
 function fieldFor(key: string): Field | "blocked" | null {
   if (!key) return null;
+  // Email comes first. A header like "Email Address" contains the word "address".
   if (key.includes("email") || key === "e_mail" || key === "mail") return "email";
   if (blocked(key)) return "blocked";
   if (key === "first" || key === "first_name" || key === "firstname" || key === "given" || key === "given_name" || key === "fname") {
@@ -257,7 +258,10 @@ export function readVolunteerTable(table: string[][]):
     });
   }
   if (!rows.length) return { error: "empty" };
-  const omitted = fields.some((field, index) => labels[index] && field !== "name" && field !== "first" && field !== "last" && field !== "email" && field !== "phone" && field !== "role" && field !== "availability" && field !== "tags" && field !== "background" && !yesIndexes.includes(index));
+  const omitted = fields.some((field, index) => {
+    if (!labels[index]?.trim() || yesIndexes.includes(index)) return false;
+    return field === "blocked" || field === null;
+  });
   return { rows, skipped, omitted };
 }
 

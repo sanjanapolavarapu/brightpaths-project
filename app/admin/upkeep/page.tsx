@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Flash, PageHeader } from "@/components/ui";
-import { changeStaffPasswordAction, createBackupAction, createStaffAction } from "@/lib/actions";
+import { changeStaffPasswordAction, createBackupAction, createStaffAction } from "@/lib/actions/upkeep";
 import { listBackups } from "@/lib/db";
 import { listSampleAccounts, listStaff } from "@/lib/data";
 import { queryValue } from "@/lib/format";

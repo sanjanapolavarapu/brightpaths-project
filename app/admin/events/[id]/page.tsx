@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { EventForm } from "@/components/forms";
 import { CapacityBar, Flash, PageHeader, Pill } from "@/components/ui";
-import { cancelSignupAction, logHoursAction, markAttendanceAction } from "@/lib/actions";
+import { cancelSignupAction, logHoursAction, markAttendanceAction } from "@/lib/actions/events";
 import { getEvent, listPeople, listSignups, listTags, qualificationIssues, tagIdsForUsers } from "@/lib/data";
 import { backgroundLabel, eventStatusLabel, formatWhen, isoToEasternLocal, queryValue, roleLabel, signupLabel } from "@/lib/format";
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { logoutAction } from "@/lib/actions";
+import { logoutAction } from "@/lib/actions/session";
 
 export function SignOutButton() {
   return (

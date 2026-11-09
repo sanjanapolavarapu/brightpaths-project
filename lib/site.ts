@@ -18,7 +18,7 @@ export async function getSite(): Promise<SiteContent> {
 export async function saveSite(values: SiteContent) {
   const db = await getDb();
   const statement = db.prepare(
-    "INSERT INTO site_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+    "INSERT INTO site_settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = excluded.value",
   );
   for (const key of SITE_KEYS) await statement.run(key, values[key]);
 }

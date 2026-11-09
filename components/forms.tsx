@@ -2,7 +2,9 @@
 
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { applyAction, saveEventAction, sendMessageAction } from "@/lib/actions";
+import { applyAction } from "@/lib/actions/applications";
+import { saveEventAction } from "@/lib/actions/events";
+import { sendMessageAction } from "@/lib/actions/messages";
 import type { Tag } from "@/lib/types";
 
 function Submit({ children }: { children: string }) {

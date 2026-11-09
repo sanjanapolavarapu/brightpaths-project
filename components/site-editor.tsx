@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
-import { saveSiteAction } from "@/lib/actions";
+import { saveSiteAction } from "@/lib/actions/upkeep";
 import { isLongSiteField, SITE_GROUPS, SITE_LABELS, SITE_LIMITS, type SiteContent, type SiteKey } from "@/lib/site-copy";
 
 function SaveWebsite() {

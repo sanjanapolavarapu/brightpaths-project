@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Flash, PageHeader, Pill } from "@/components/ui";
-import { addNoteAction, logHoursAction, savePersonAction } from "@/lib/actions";
+import { logHoursAction } from "@/lib/actions/events";
+import { addNoteAction, savePersonAction } from "@/lib/actions/people";
 import { getApplicationForUser, getPerson, listEvents, listHours, listNotes, listTags, participationFor, tagIdsForUser } from "@/lib/data";
 import { formatDay, formatHours, formatWhen, queryValue, signupLabel } from "@/lib/format";
 

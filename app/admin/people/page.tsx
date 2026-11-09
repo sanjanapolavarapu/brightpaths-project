@@ -1,6 +1,6 @@
 import { PeopleFilters, PeopleTable } from "@/components/people";
 import { Flash, PageHeader } from "@/components/ui";
-import { importVolunteersAction } from "@/lib/actions";
+import { importVolunteersAction } from "@/lib/actions/people";
 import { listPeople, listTags } from "@/lib/data";
 import { queryValue } from "@/lib/format";
 

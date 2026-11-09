@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Flash, PageHeader } from "@/components/ui";
-import { markAlertReadAction } from "@/lib/actions";
+import { markAlertReadAction } from "@/lib/actions/messages";
 import { requireAdmin } from "@/lib/auth";
 import { listNotifications } from "@/lib/data";
 import { formatWhen, queryValue } from "@/lib/format";

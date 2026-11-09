@@ -15,7 +15,7 @@ DATABASE_URL=postgresql://...
 SESSION_SECRET=a-long-random-string
 ```
 
-`DATABASE_URL` is the Supabase pooler connection string (`pooler.supabase.com`). The direct database host does not connect from a host like Vercel. `SESSION_SECRET` signs the sign-in cookie. If it is missing, the app uses a fallback that is in the code, so set one before the site is public.
+`DATABASE_URL` is the Supabase pooler connection string (`pooler.supabase.com`). The direct database host does not connect from a host like Vercel. `SESSION_SECRET` signs the sign-in cookie. The site will not start sign-in without it. Use a long random string, and keep that same value if you move the site.
 
 ```bash
 npm install

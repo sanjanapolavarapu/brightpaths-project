@@ -188,7 +188,7 @@ button { cursor: pointer; }
   margin-bottom: 2rem;
 }
 .login-grid .card { padding: 1.35rem 1.4rem 1.45rem; }
-.login-grid:not(.two) { max-width: 32rem; }
+.login-grid:not(.two) { width: min(32rem, 100%); margin-inline: auto; }
 
 .site-form fieldset + fieldset {
   margin-top: 0.35rem;

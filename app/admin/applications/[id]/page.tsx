@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Flash, PageHeader, Pill } from "@/components/ui";
-import { updateApplicationAction } from "@/lib/actions";
-import { getApplication, listTags } from "@/lib/data";
+import { updateApplicationAction } from "@/lib/actions/applications";
+import { getApplication, interestIds, listTags } from "@/lib/data";
 import { applicationLabel, cadenceLabel, formatWhen, queryValue, roleLabel, volunteerAsLabel } from "@/lib/format";
 
 export const metadata = { title: "Application" };
@@ -21,13 +21,8 @@ export default async function ApplicationDetail({
   if (!application) notFound();
   const query = await searchParams;
   const tags = await listTags();
-  let interestNames: string[] = [];
-  try {
-    const ids = JSON.parse(application.interests) as number[];
-    interestNames = tags.filter((tag) => ids.includes(tag.id)).map((tag) => tag.name);
-  } catch {
-    interestNames = [];
-  }
+  const ids = interestIds(application.interests);
+  const interestNames = tags.filter((tag) => ids.includes(tag.id)).map((tag) => tag.name);
 
   return (
     <div className="stack" id="content">

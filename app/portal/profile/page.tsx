@@ -1,5 +1,5 @@
 import { Flash, PageHeader, Pill } from "@/components/ui";
-import { updateOwnProfileAction } from "@/lib/actions";
+import { updateOwnProfileAction } from "@/lib/actions/people";
 import { requireUser } from "@/lib/auth";
 import { getPerson, tagIdsForUser } from "@/lib/data";
 import { backgroundLabel, queryValue, roleLabel, statusLabel, tagList } from "@/lib/format";
