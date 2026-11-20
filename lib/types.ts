@@ -120,6 +120,7 @@ export type MessageRow = {
   sent_at: string;
   sender_name?: string;
   recipient_count?: number;
+  email_status?: string;
 };
 
 export type NotificationRow = {

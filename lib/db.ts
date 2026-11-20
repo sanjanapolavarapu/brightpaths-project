@@ -9,6 +9,7 @@ const globalForDb = globalThis as unknown as {
   brightpathsPool?: ReturnType<typeof openPool>;
   brightpathsReady?: boolean;
   brightpathsOpen?: Promise<Db>;
+  brightpathsSchema?: number;
 };
 
 const SEED_TAGS = [
@@ -135,6 +136,8 @@ CREATE TABLE IF NOT EXISTS messages (
 CREATE TABLE IF NOT EXISTS message_recipients (
   message_id INTEGER NOT NULL REFERENCES messages(id),
   user_id INTEGER NOT NULL REFERENCES users(id),
+  email_status TEXT NOT NULL DEFAULT '',
+  email_error TEXT NOT NULL DEFAULT '',
   PRIMARY KEY (message_id, user_id)
 );
 
@@ -734,7 +737,7 @@ async function seed(db: Db) {
     await notify(
       maya,
       "message",
-      "New message from staff",
+      "New announcement",
       "Childcare help needed this week",
       "/portal/messages",
       1,
@@ -1083,12 +1086,24 @@ function resetPool() {
   if (pool) void pool.end({ timeout: 1 });
 }
 
+async function ensureMessageDelivery(db: Db) {
+  await db.exec(
+    `ALTER TABLE message_recipients ADD COLUMN IF NOT EXISTS email_status TEXT NOT NULL DEFAULT '';
+     ALTER TABLE message_recipients ADD COLUMN IF NOT EXISTS email_error TEXT NOT NULL DEFAULT ''`,
+  );
+}
+
 export async function getDb() {
   let lastError: unknown;
   for (let attempt = 0; attempt < 2; attempt += 1) {
     try {
       if (!globalForDb.brightpathsOpen) globalForDb.brightpathsOpen = openDatabase();
-      return await globalForDb.brightpathsOpen;
+      const db = await globalForDb.brightpathsOpen;
+      if (globalForDb.brightpathsSchema !== 2) {
+        await ensureMessageDelivery(db);
+        globalForDb.brightpathsSchema = 2;
+      }
+      return db;
     } catch (error) {
       lastError = error;
       resetPool();

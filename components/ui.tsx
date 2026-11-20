@@ -36,6 +36,11 @@ const SAVED: Record<string, string> = {
   cancel: "You're off that shift.",
   attendance: "Attendance updated.",
   message: "Sent.",
+  emailed: "Sent. It is in the portal and in their email.",
+  portalonly: "Saved in the portal. Open the email on this page and send it.",
+  partial: "Saved in the portal. Some emails did not go out.",
+  practice: "Saved in the portal. Practice addresses were not emailed.",
+  text: "Saved in the portal.",
   read: "Alerts updated.",
   contact: "Saved.",
   password: "Password updated.",
@@ -73,8 +78,72 @@ export function PageHeader({
   );
 }
 
-export function Pill({ value, children }: { value: string; children: React.ReactNode }) {
-  return <span className={`pill ${value}`}>{children}</span>;
+type PillKind = "role" | "status" | "tag" | "meta" | "channel";
+
+export function Pill({
+  value,
+  kind = "status",
+  children,
+}: {
+  value: string;
+  kind?: PillKind;
+  children: React.ReactNode;
+}) {
+  return <span className={`pill ${kind} ${value}`}>{children}</span>;
+}
+
+const TAG_TONES: Record<string, string> = {
+  "first steps bags": "bags",
+  childcare: "childcare",
+  "family resource closet": "closet",
+  "donation drives": "drives",
+  "events and community": "events",
+};
+
+function toneForTag(name: string) {
+  const known = TAG_TONES[name.trim().toLowerCase()];
+  if (known) return known;
+  const extras = ["bags", "childcare", "closet", "drives", "events"];
+  let hash = 0;
+  for (const char of name) hash = (hash * 33 + char.charCodeAt(0)) >>> 0;
+  return extras[hash % extras.length];
+}
+
+export function TagPill({ name }: { name: string }) {
+  return <span className={`pill tag ${toneForTag(name)}`}>{name}</span>;
+}
+
+export function volunteerGap(filled: number, minimum: number) {
+  const gap = Math.max(0, minimum - filled);
+  return gap === 1 ? "1 more volunteer to reach the minimum" : `${gap} more volunteers to reach the minimum`;
+}
+
+export function VolunteerNeed({
+  title,
+  when,
+  filled,
+  capacity,
+  minimum,
+  action,
+}: {
+  title: string;
+  when: string;
+  filled: number;
+  capacity: number;
+  minimum: number;
+  action: React.ReactNode;
+}) {
+  return (
+    <article className="need-row">
+      <div>
+        <strong>{title}</strong>
+        <div className="muted">{when}</div>
+        <CapacityBar filled={filled} capacity={capacity} minimum={minimum} />
+        <p className="need-gap">{volunteerGap(filled, minimum)}</p>
+      </div>
+      {action}
+    </article>
+  );
 }
 
 export function CapacityBar({

@@ -56,6 +56,11 @@ export function MonthCalendar({
           </div>
         ))}
       </div>
+      {events.some((event) => event.short) ? (
+        <p className="cal-legend">
+          <span className="swatch" /> Gold means that shift still needs volunteers.
+        </p>
+      ) : null}
     </div>
   );
 }

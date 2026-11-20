@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { EventForm } from "@/components/forms";
-import { CapacityBar, Flash, PageHeader, Pill } from "@/components/ui";
-import { cancelSignupAction, logHoursAction, markAttendanceAction } from "@/lib/actions/events";
+import { EventForm, RecordHoursForm } from "@/components/forms";
+import { CapacityBar, Flash, PageHeader, Pill, TagPill, volunteerGap } from "@/components/ui";
+import { cancelSignupAction, markAttendanceAction } from "@/lib/actions/events";
 import { getEvent, listPeople, listSignups, listTags, qualificationIssues, tagIdsForUsers } from "@/lib/data";
 import { backgroundLabel, eventStatusLabel, formatWhen, isoToEasternLocal, queryValue, roleLabel, signupLabel } from "@/lib/format";
 
@@ -31,19 +31,21 @@ export default async function EventDetailPage({
       </PageHeader>
       <Flash error={queryValue(query.error)} saved={queryValue(query.saved)} />
       {short ? (
-        <p className="banner warn">
-          This shift has {event.signed_up} of {event.minimum_volunteers} volunteers needed.
-        </p>
+        <section className="need-card card stack">
+          <h2>Need volunteers</h2>
+          <p className="need-gap">{volunteerGap(event.signed_up, event.minimum_volunteers)}</p>
+          <p className="muted">
+            {event.signed_up} signed up. Room for {event.capacity}.
+          </p>
+        </section>
       ) : null}
       <section className="card stack">
-        <p>{event.description}</p>
+        <p className="copy">{event.description}</p>
         <div className="pills">
           {event.tags.map((tag) => (
-            <span className="pill" key={tag.id}>
-              {tag.name}
-            </span>
+            <TagPill name={tag.name} key={tag.id} />
           ))}
-          {event.required_background_check ? <Pill value="approved">Background check required</Pill> : null}
+          {event.required_background_check ? <Pill value="pending">Background check required</Pill> : null}
         </div>
         <CapacityBar filled={event.signed_up} capacity={event.capacity} minimum={event.minimum_volunteers} />
         <p className="muted">{event.hours_credit} hours credited when someone is marked attended.</p>
@@ -113,34 +115,13 @@ export default async function EventDetailPage({
         </div>
         {!roster.length ? <p className="muted">No one is signed up.</p> : null}
         <h3>Record hours</h3>
-        <form className="filters" action={logHoursAction}>
-          <input type="hidden" name="returnTo" value={`/admin/events/${event.id}`} />
-          <input type="hidden" name="eventId" value={event.id} />
-          <label className="field">
-            <span>Person</span>
-            <select name="userId" required defaultValue="">
-              <option value="" disabled>
-                Choose
-              </option>
-              {people.map((person) => (
-                <option key={person.id} value={person.id}>
-                  {person.name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="field">
-            <span>Date</span>
-            <input type="date" name="servedOn" required defaultValue={isoToEasternLocal(event.starts_at).slice(0, 10)} />
-          </label>
-          <label className="field">
-            <span>Hours</span>
-            <input type="number" name="hours" min={0.25} step={0.25} required defaultValue={event.hours_credit} />
-          </label>
-          <button className="btn" type="submit">
-            Record hours
-          </button>
-        </form>
+        <RecordHoursForm
+          people={people}
+          eventId={event.id}
+          returnTo={`/admin/events/${event.id}`}
+          servedOn={isoToEasternLocal(event.starts_at).slice(0, 10)}
+          hours={event.hours_credit}
+        />
       </section>
       <details className="card">
         <summary>Edit event</summary>

@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { getDb } from "./db";
 import { matchesAvailability, nowIso } from "./format";
 import { qualificationIssues } from "./rules";
@@ -220,30 +221,52 @@ export async function listNotes(userId: number) {
   );
 }
 
-export async function listEvents() {
-  const events = await all<EventRow>("SELECT * FROM events ORDER BY starts_at");
-  return Promise.all(events.map((event) => attachEvent(event)));
+async function withRoster(events: EventRow[]): Promise<EventDetail[]> {
+  if (!events.length) return [];
+  const tagParams: Sql[] = [];
+  const tagMarks = events.map((event) => slot(tagParams, event.id)).join(", ");
+  const countParams: Sql[] = [];
+  const countMarks = events.map((event) => slot(countParams, event.id)).join(", ");
+  const tagRows = await all<Tag & { event_id: number }>(
+    `SELECT et.event_id, t.id, t.name, t.requires_background
+     FROM event_tags et
+     JOIN tags t ON t.id = et.tag_id
+     WHERE et.event_id IN (${tagMarks})
+     ORDER BY t.name`,
+    tagParams,
+  );
+  const counts = await all<{ event_id: number; n: number }>(
+    `SELECT event_id, COUNT(*) AS n
+     FROM signups
+     WHERE status = 'signed_up' AND event_id IN (${countMarks})
+     GROUP BY event_id`,
+    countParams,
+  );
+  const tagsByEvent = new Map<number, Tag[]>();
+  for (const row of tagRows) {
+    const eventId = Number(row.event_id);
+    const tags = tagsByEvent.get(eventId) ?? [];
+    tags.push({ id: row.id, name: row.name, requires_background: row.requires_background });
+    tagsByEvent.set(eventId, tags);
+  }
+  const signedByEvent = new Map(counts.map((row) => [Number(row.event_id), Number(row.n)]));
+  return events.map((event) => ({
+    ...event,
+    tags: tagsByEvent.get(Number(event.id)) ?? [],
+    signed_up: signedByEvent.get(Number(event.id)) ?? 0,
+  }));
 }
+
+export const listEvents = cache(async () => {
+  const events = await all<EventRow>("SELECT * FROM events ORDER BY starts_at");
+  return withRoster(events);
+});
 
 export async function getEvent(id: number) {
   const event = await one<EventRow>("SELECT * FROM events WHERE id = $1", [id]);
-  return event ? await attachEvent(event) : undefined;
-}
-
-async function attachEvent(event: EventRow): Promise<EventDetail> {
-  const tags = await all<Tag>(
-    `SELECT t.id, t.name, t.requires_background
-     FROM tags t
-     JOIN event_tags et ON et.tag_id = t.id
-     WHERE et.event_id = $1
-     ORDER BY t.name`,
-    [event.id],
-  );
-  const signed = await one<{ n: number }>(
-    "SELECT COUNT(*) AS n FROM signups WHERE event_id = $1 AND status = 'signed_up'",
-    [event.id],
-  );
-  return { ...event, tags, signed_up: Number(signed?.n ?? 0) };
+  if (!event) return undefined;
+  const [detail] = await withRoster([event]);
+  return detail;
 }
 
 export async function listSignups(eventId: number) {
@@ -361,8 +384,9 @@ export async function getMessage(id: number) {
 }
 
 export async function messageRecipients(messageId: number) {
-  return await all<User>(
-    `SELECT u.id, u.email, u.name, u.phone, u.role, u.account_status, u.background_check, u.availability, u.created_at
+  return await all<User & { email_status: string; email_error: string }>(
+    `SELECT u.id, u.email, u.name, u.phone, u.role, u.account_status, u.background_check, u.availability, u.created_at,
+            r.email_status, r.email_error
      FROM users u
      JOIN message_recipients r ON r.user_id = u.id
      WHERE r.message_id = $1
@@ -373,7 +397,7 @@ export async function messageRecipients(messageId: number) {
 
 export async function messagesFor(userId: number) {
   return await all<MessageRow>(
-    `SELECT m.*, u.name AS sender_name
+    `SELECT m.*, u.name AS sender_name, r.email_status
      FROM messages m
      JOIN message_recipients r ON r.message_id = m.id
      JOIN users u ON u.id = m.sent_by
@@ -422,7 +446,17 @@ export async function notifyAdmins(kind: string, title: string, body: string, hr
   for (const admin of admins) await notifyUser(admin.id, kind, title, body, href);
 }
 
-export async function refreshUnderstaffedAlerts() {
+let understaffedAt = 0;
+let understaffedEvents: EventDetail[] = [];
+let understaffedTask: Promise<EventDetail[]> | null = null;
+const UNDERSTAFFED_MS = 60_000;
+
+export function noteStaffingChanged() {
+  understaffedAt = 0;
+  understaffedEvents = [];
+}
+
+async function computeUnderstaffedAlerts() {
   const events = (await listEvents()).filter((event) => {
     const start = new Date(event.starts_at).getTime();
     const soon = Date.now() + 7 * 24 * 60 * 60 * 1000;
@@ -459,23 +493,36 @@ export async function refreshUnderstaffedAlerts() {
       );
     }
   }
+  understaffedAt = Date.now();
+  understaffedEvents = events;
   return events;
 }
 
+export function refreshUnderstaffedAlerts() {
+  if (Date.now() - understaffedAt < UNDERSTAFFED_MS) return Promise.resolve(understaffedEvents);
+  if (!understaffedTask) {
+    understaffedTask = computeUnderstaffedAlerts().finally(() => {
+      understaffedTask = null;
+    });
+  }
+  return understaffedTask;
+}
+
 export async function dashboardStats() {
-  const count = async (sql: string) => Number((await one<{ n: number }>(sql))?.n ?? 0);
   const monthStart = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}-01`;
-  const hours = await one<{ n: number }>(
-    "SELECT COALESCE(SUM(hours), 0) AS n FROM hours_entries WHERE served_on >= $1",
+  const row = await one<{ volunteers: number; interns: number; applications: number; hours: number }>(
+    `SELECT
+       (SELECT COUNT(*) FROM users WHERE role = 'volunteer' AND account_status = 'active') AS volunteers,
+       (SELECT COUNT(*) FROM users WHERE role = 'intern' AND account_status = 'active') AS interns,
+       (SELECT COUNT(*) FROM applications WHERE status IN ('submitted', 'interview', 'background_check')) AS applications,
+       (SELECT COALESCE(SUM(hours), 0) FROM hours_entries WHERE served_on >= $1) AS hours`,
     [monthStart],
   );
   return {
-    volunteers: await count("SELECT COUNT(*) AS n FROM users WHERE role = 'volunteer' AND account_status = 'active'"),
-    interns: await count("SELECT COUNT(*) AS n FROM users WHERE role = 'intern' AND account_status = 'active'"),
-    applications: await count(
-      "SELECT COUNT(*) AS n FROM applications WHERE status IN ('submitted', 'interview', 'background_check')",
-    ),
-    hoursThisMonth: Number(hours?.n ?? 0),
+    volunteers: Number(row?.volunteers ?? 0),
+    interns: Number(row?.interns ?? 0),
+    applications: Number(row?.applications ?? 0),
+    hoursThisMonth: Number(row?.hours ?? 0),
   };
 }
 

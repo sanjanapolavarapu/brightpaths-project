@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { MonthCalendar } from "@/components/calendar";
-import { CapacityBar, PageHeader } from "@/components/ui";
+import { CapacityBar, PageHeader, Pill } from "@/components/ui";
 import { requireUser } from "@/lib/auth";
 import { listEvents, qualificationIssues, suggestedEventsFor, tagIdsForUser } from "@/lib/data";
 import { currentEasternMonth, formatWhen, queryValue } from "@/lib/format";
@@ -21,7 +21,14 @@ export default async function PortalEventsPage({
   const month = match ? Number(match[2]) : fallback.month;
   const tagIds = await tagIdsForUser(user.id);
   const events = (await listEvents()).filter((event) => event.status === "open" || event.status === "completed");
-  const upcoming = events.filter((event) => event.status === "open" && new Date(event.starts_at).getTime() >= Date.now());
+  const upcoming = events
+    .filter((event) => event.status === "open" && new Date(event.starts_at).getTime() >= Date.now())
+    .sort((a, b) => {
+      const aNeeds = a.signed_up < a.minimum_volunteers ? 0 : 1;
+      const bNeeds = b.signed_up < b.minimum_volunteers ? 0 : 1;
+      if (aNeeds !== bNeeds) return aNeeds - bNeeds;
+      return new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime();
+    });
   const suggested = await suggestedEventsFor(user, tagIds);
 
   return (
@@ -36,7 +43,7 @@ export default async function PortalEventsPage({
             id: event.id,
             title: event.title,
             starts_at: event.starts_at,
-            short: false,
+            short: event.status === "open" && event.signed_up < event.minimum_volunteers,
           }))}
         />
       </section>
@@ -55,12 +62,18 @@ export default async function PortalEventsPage({
       ) : null}
       <section className="card">
         <h2>Open</h2>
+        <p className="muted">Shifts that still need volunteers are highlighted and listed first.</p>
         <div className="list">
           {upcoming.map((event) => {
             const issues = qualificationIssues(user, event, tagIds);
+            const gap = event.minimum_volunteers - event.signed_up;
+            const needs = gap > 0;
             return (
-              <Link className="row" key={event.id} href={`/portal/events/${event.id}`}>
-                <strong>{event.title}</strong>
+              <Link className={needs ? "row needs" : "row"} key={event.id} href={`/portal/events/${event.id}`}>
+                <div className="row-line">
+                  <strong>{event.title}</strong>
+                  {needs ? <Pill value="short">Needs {gap} more</Pill> : null}
+                </div>
                 <div className="muted">{formatWhen(event.starts_at)} · {event.location}</div>
                 <CapacityBar filled={event.signed_up} capacity={event.capacity} minimum={event.minimum_volunteers} />
                 {issues.length ? <div className="muted">{issues[0]}</div> : null}

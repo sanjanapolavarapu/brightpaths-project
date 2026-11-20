@@ -11,7 +11,7 @@ const adminLinks = [
   ["/admin/archive", "Archive"],
   ["/admin/events", "Events"],
   ["/admin/hours", "Hours"],
-  ["/admin/messages", "Messages"],
+  ["/admin/messages", "Announcements"],
   ["/admin/alerts", "Alerts"],
   ["/admin/site", "Website"],
   ["/admin/upkeep", "Upkeep"],
@@ -21,7 +21,7 @@ const portalLinks = [
   ["/portal", "Home"],
   ["/portal/events", "Events"],
   ["/portal/hours", "Hours"],
-  ["/portal/messages", "Messages"],
+  ["/portal/messages", "Announcements"],
   ["/portal/profile", "Profile"],
 ];
 

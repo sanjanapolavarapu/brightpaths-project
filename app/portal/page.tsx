@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Flash, PageHeader, Pill } from "@/components/ui";
+import { Flash, PageHeader, Pill, VolunteerNeed } from "@/components/ui";
+import { signupAction } from "@/lib/actions/events";
 import { requireUser } from "@/lib/auth";
 import { getApplicationForUser, hoursByPerson, participationFor, shortEventsFor, suggestedEventsFor, tagIdsForUser } from "@/lib/data";
 import { applicationLabel, dateRange, formatHours, formatWhen, queryValue } from "@/lib/format";
@@ -23,7 +24,10 @@ export default async function PortalHome({
     (item) => item.status === "signed_up" && new Date(item.starts_at).getTime() >= Date.now(),
   );
   const tagIds = await tagIdsForUser(user.id);
-  const short = user.account_status === "active" ? await shortEventsFor(user, tagIds) : [];
+  const signedUp = new Set(upcoming.map((item) => item.event_id));
+  const short = (user.account_status === "active" ? await shortEventsFor(user, tagIds) : []).filter(
+    (event) => !signedUp.has(event.id),
+  );
   const suggested = await suggestedEventsFor(user, tagIds);
   const first = user.name.split(" ")[0];
 
@@ -83,13 +87,32 @@ export default async function PortalHome({
         </section>
       ) : null}
       {short.length ? (
-        <section className="card stack">
-          <h2>Short this week</h2>
-          {short.map((event) => (
-            <Link key={event.id} href={`/portal/events/${event.id}`}>
-              {event.title} · {formatWhen(event.starts_at)} · {event.signed_up} of {event.minimum_volunteers} needed
-            </Link>
-          ))}
+        <section className="need-card card stack">
+          <div>
+            <p className="eyebrow">This week</p>
+            <h2>Need volunteers</h2>
+            <p className="muted">These shifts are under the minimum, and you qualify. Sign up if you can make one.</p>
+          </div>
+          <div className="need-list">
+            {short.map((event) => (
+              <VolunteerNeed
+                key={event.id}
+                title={event.title}
+                when={formatWhen(event.starts_at)}
+                filled={event.signed_up}
+                capacity={event.capacity}
+                minimum={event.minimum_volunteers}
+                action={
+                  <form action={signupAction}>
+                    <input type="hidden" name="eventId" value={event.id} />
+                    <button className="btn" type="submit">
+                      Sign up
+                    </button>
+                  </form>
+                }
+              />
+            ))}
+          </div>
         </section>
       ) : null}
     </div>

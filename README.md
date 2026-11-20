@@ -24,6 +24,16 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
+Staff announcements always show in the portal. To also email volunteers and interns, add:
+
+```
+RESEND_API_KEY=re_...
+EMAIL_FROM="Brightpaths <csears@pcaathens.org>"
+EMAIL_REPLY_TO=csears@pcaathens.org
+```
+
+`EMAIL_FROM` has to be an address Resend is allowed to send from. Addresses ending in `.test` are practice data and are not emailed. A portal-only note is not sent to phones.
+
 Records are in Supabase. They are not in a file in this folder.
 
 ## Sample sign-in

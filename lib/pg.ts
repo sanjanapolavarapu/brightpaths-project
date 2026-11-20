@@ -43,7 +43,7 @@ export function openPool(url: string) {
   return postgres(url, {
     ssl: { rejectUnauthorized: false },
     max: 1,
-    idle_timeout: 20,
+    idle_timeout: 120,
     prepare: false,
     fetch_types: false,
     connect_timeout: 10,
