@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { requireAdmin, requireUser } from "../auth";
-import { getEvent, getSignup, getUser, hasHoursForEvent, insertHours, listTags, promoteWaitlist, qualificationIssues, tagIdsForUser } from "../data";
+import { getEvent, getSignup, getUser, hasHoursForEvent, insertHours, listTags, noteStaffingChanged, promoteWaitlist, qualificationIssues, tagIdsForUser } from "../data";
 import { getDb } from "../db";
 import { adminPath, idOf, tagIdsFrom, text, withParam } from "../form";
 import { easternDateKey, easternLocalToIso, isYmd, nowIso } from "../format";
@@ -74,6 +74,7 @@ export async function saveEventAction(_prev: { error: string }, formData: FormDa
   }
   const insert = await db.prepare("INSERT INTO event_tags (event_id, tag_id) VALUES ($1, $2)");
   for (const tagId of selectedTags) await insert.run(eventId, tagId);
+  noteStaffingChanged();
   redirect(`/admin/events/${eventId}?saved=event`);
 }
 
@@ -102,6 +103,7 @@ export async function signupAction(formData: FormData) {
       .prepare("INSERT INTO signups (event_id, user_id, status, created_at) VALUES ($1, $2, $3, $4)")
       .run(eventId, user.id, status, nowIso());
   }
+  noteStaffingChanged();
   redirect(`/portal/events/${eventId}?saved=${status === "signed_up" ? "signup" : "waitlist"}`);
 }
 
@@ -115,6 +117,7 @@ export async function cancelSignupAction(formData: FormData) {
   if (!existing) redirect(asStaff ? `/admin/events/${eventId}?error=missing` : `/portal/events/${eventId}?error=missing`);
   await (await getDb()).prepare("UPDATE signups SET status = 'cancelled' WHERE id = $1").run(existing.id);
   if (existing.status === "signed_up") await promoteWaitlist(eventId);
+  noteStaffingChanged();
   if (!asStaff && targetId === user.id) {
     redirect(`/portal/events/${eventId}?saved=cancel`);
   }
@@ -133,6 +136,7 @@ export async function markAttendanceAction(formData: FormData) {
     redirect("/admin/events?error=missing");
   }
   await (await getDb()).prepare("UPDATE signups SET status = $1 WHERE id = $2").run(status, signupId);
+  noteStaffingChanged();
   if (decision.recordHours) {
     const event = await getEvent(signup.event_id);
     if (event && !await hasHoursForEvent(signup.user_id, event.id)) {
@@ -174,6 +178,7 @@ export async function logHoursAction(formData: FormData) {
     await (await getDb())
       .prepare("UPDATE signups SET status = 'attended' WHERE event_id = $1 AND user_id = $2 AND status = 'signed_up'")
       .run(eventId, userId);
+    noteStaffingChanged();
   }
   redirect(withParam(returnTo, "saved", "hours"));
 }

@@ -2,9 +2,10 @@ import { MessageComposer } from "@/components/forms";
 import { PageHeader } from "@/components/ui";
 import { findRecipients, listTags } from "@/lib/data";
 import { describeFilters, queryValue } from "@/lib/format";
+import { announcementSender, mailConfigured } from "@/lib/mail";
 import type { RecipientFilters } from "@/lib/types";
 
-export const metadata = { title: "New message" };
+export const metadata = { title: "New announcement" };
 
 export default async function NewMessagePage({
   searchParams,
@@ -25,13 +26,20 @@ export default async function NewMessagePage({
     tagIds,
   };
   const recipients = await findRecipients(filters);
+  const subject = queryValue(params.subject).slice(0, 140);
+  const body = queryValue(params.body).slice(0, 5000);
 
   return (
     <div className="stack" id="content">
-      <PageHeader title="New message" />
+      <PageHeader
+        title="New announcement"
+        lede="Choose volunteers, interns, or both. They see it in the portal, and email also sends a copy to their inbox."
+      />
       <section className="card stack">
         <h2>Who should get it</h2>
         <form className="stack" action="/admin/messages/new" method="get">
+          {subject ? <input type="hidden" name="subject" value={subject} /> : null}
+          {body ? <input type="hidden" name="body" value={body} /> : null}
           <div className="form-grid">
             <label className="field">
               <span>Role</span>
@@ -77,6 +85,10 @@ export default async function NewMessagePage({
       </section>
       <section className="card">
         <MessageComposer
+          mailReady={mailConfigured()}
+          fromEmail={announcementSender()}
+          subject={subject}
+          body={body}
           recipientCount={recipients.length}
           filters={{
             role: filters.role,

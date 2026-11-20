@@ -1,9 +1,11 @@
 import { notFound } from "next/navigation";
+import { MailboxSend } from "@/components/mailbox-send";
 import { Flash, PageHeader, Pill } from "@/components/ui";
 import { getMessage, messageRecipients } from "@/lib/data";
-import { formatWhen, queryValue, roleLabel } from "@/lib/format";
+import { emailDeliveryLabel, formatWhen, queryValue, roleLabel } from "@/lib/format";
+import { announcementSender, mailConfigured } from "@/lib/mail";
 
-export const metadata = { title: "Message" };
+export const metadata = { title: "Announcement" };
 
 export default async function MessageDetail({
   params,
@@ -17,15 +19,32 @@ export default async function MessageDetail({
   if (!message) notFound();
   const query = await searchParams;
   const recipients = await messageRecipients(message.id);
+  const emailed = recipients.filter((person) => person.email_status === "sent").length;
+  const unsent = recipients.length - emailed;
   return (
     <div className="stack" id="content">
-      <PageHeader title={message.subject || "Message"} lede={`${formatWhen(message.sent_at)} · ${message.sender_name}`}>
-        <Pill value={message.channel === "email" ? "submitted" : "interview"}>{message.channel === "email" ? "Email" : "Text"}</Pill>
+      <PageHeader title={message.subject || "Announcement"} lede={`${formatWhen(message.sent_at)} · ${message.sender_name}`}>
+        <Pill kind="channel" value={message.channel}>{message.channel === "email" ? "Email" : "Portal"}</Pill>
       </PageHeader>
       <Flash saved={queryValue(query.saved)} />
+      {message.channel === "email" && emailed === 0 && !mailConfigured() ? (
+        <MailboxSend
+          fromEmail={announcementSender()}
+          subject={message.subject || "Announcement"}
+          body={message.body}
+          emails={recipients.map((person) => person.email)}
+        />
+      ) : null}
       <section className="card stack">
-        <p>{message.body}</p>
+        <p className="copy">{message.body}</p>
         <p className="muted">{message.filter_summary}</p>
+        {message.channel === "email" && (emailed > 0 || mailConfigured()) ? (
+          <p className="muted">
+            {emailed} emailed. {unsent} not sent.
+          </p>
+        ) : message.channel === "sms" ? (
+          <p className="muted">This note is in the portal only.</p>
+        ) : null}
       </section>
       <section className="card">
         <h2>Recipients</h2>
@@ -36,6 +55,7 @@ export default async function MessageDetail({
                 <th>Name</th>
                 <th>Role</th>
                 <th>Email</th>
+                {message.channel === "email" ? <th>Delivery</th> : null}
                 <th>Phone</th>
               </tr>
             </thead>
@@ -45,6 +65,24 @@ export default async function MessageDetail({
                   <td>{person.name}</td>
                   <td>{roleLabel(person.role)}</td>
                   <td>{person.email}</td>
+                  {message.channel === "email" ? (
+                    <td>
+                      <Pill
+                        value={
+                          person.email_status === "sent"
+                            ? "approved"
+                            : person.email_status === "failed"
+                              ? "rejected"
+                              : person.email_status === "skipped"
+                                ? "pending"
+                                : "inactive"
+                        }
+                      >
+                        {emailDeliveryLabel(person.email_status)}
+                      </Pill>
+                      {person.email_error ? <div className="muted">{person.email_error}</div> : null}
+                    </td>
+                  ) : null}
                   <td>{person.phone}</td>
                 </tr>
               ))}

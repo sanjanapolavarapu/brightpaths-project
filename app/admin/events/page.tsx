@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { MonthCalendar } from "@/components/calendar";
-import { CapacityBar, PageHeader, Pill } from "@/components/ui";
+import { CapacityBar, PageHeader, Pill, TagPill } from "@/components/ui";
 import { listEvents } from "@/lib/data";
 import { currentEasternMonth, eventStatusLabel, formatWhen, queryValue } from "@/lib/format";
 
@@ -59,11 +59,12 @@ export default async function EventsPage({
                     <Link href={`/admin/events/${event.id}`}>{event.title}</Link>
                     <div className="pills">
                       {event.tags.map((tag) => (
-                        <span className="pill" key={tag.id}>
-                          {tag.name}
-                        </span>
+                        <TagPill name={tag.name} key={tag.id} />
                       ))}
                       {event.required_background_check ? <Pill value="pending">Background check</Pill> : null}
+                      {event.signed_up < event.minimum_volunteers ? (
+                        <Pill value="short">Needs {event.minimum_volunteers - event.signed_up} more</Pill>
+                      ) : null}
                     </div>
                   </td>
                   <td>{formatWhen(event.starts_at)}</td>

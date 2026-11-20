@@ -1,4 +1,4 @@
-import { Flash, PageHeader, Pill } from "@/components/ui";
+import { Flash, PageHeader, Pill, TagPill } from "@/components/ui";
 import { updateOwnProfileAction } from "@/lib/actions/people";
 import { requireUser } from "@/lib/auth";
 import { getPerson, tagIdsForUser } from "@/lib/data";
@@ -23,15 +23,13 @@ export default async function ProfilePage({
       <Flash error={queryValue(params.error)} saved={queryValue(params.saved)} />
       <section className="card stack">
         <div className="pills">
-          <Pill value={user.role}>{roleLabel(user.role)}</Pill>
+          <Pill kind="role" value={user.role}>{roleLabel(user.role)}</Pill>
           <Pill value={user.account_status}>{statusLabel(user.account_status)}</Pill>
           <Pill value={user.background_check}>{backgroundLabel(user.background_check)}</Pill>
         </div>
         <div className="pills">
           {tagList(person?.tag_names).map((tag) => (
-            <span className="pill" key={tag}>
-              {tag}
-            </span>
+            <TagPill name={tag} key={tag} />
           ))}
           {!tags.length ? <span className="muted">No interests listed yet. Staff can add those.</span> : null}
         </div>
@@ -49,7 +47,7 @@ export default async function ProfilePage({
           </label>
           <label className="field">
             <span>Availability</span>
-            <input name="availability" defaultValue={user.availability} placeholder="Weekday mornings, Saturday afternoons, or weekends" />
+            <textarea className="short" name="availability" defaultValue={user.availability} placeholder="Weekday mornings, Saturday afternoons, or weekends" />
             <p className="muted">Days and time of day.</p>
           </label>
           <h3>Change password</h3>

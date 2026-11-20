@@ -3,15 +3,18 @@ import { PageHeader, Pill } from "@/components/ui";
 import { listMessages } from "@/lib/data";
 import { formatWhen } from "@/lib/format";
 
-export const metadata = { title: "Messages" };
+export const metadata = { title: "Announcements" };
 
 export default async function MessagesPage() {
   const messages = await listMessages();
   return (
     <div className="stack" id="content">
-      <PageHeader title="Messages">
+      <PageHeader
+        title="Announcements"
+        lede="Notes for volunteers and interns. Email sends a copy to their inbox and keeps the same note in the portal."
+      >
         <Link className="btn" href="/admin/messages/new">
-          New message
+          New announcement
         </Link>
       </PageHeader>
       <section className="card">
@@ -21,7 +24,7 @@ export default async function MessagesPage() {
               <tr>
                 <th>When</th>
                 <th>Channel</th>
-                <th>Message</th>
+                <th>Announcement</th>
                 <th>Audience</th>
                 <th>People</th>
               </tr>
@@ -31,8 +34,8 @@ export default async function MessagesPage() {
                 <tr key={message.id}>
                   <td>{formatWhen(message.sent_at)}</td>
                   <td>
-                    <Pill value={message.channel === "email" ? "submitted" : "interview"}>
-                      {message.channel === "email" ? "Email" : "Text"}
+                    <Pill kind="channel" value={message.channel}>
+                      {message.channel === "email" ? "Email" : "Portal"}
                     </Pill>
                   </td>
                   <td>

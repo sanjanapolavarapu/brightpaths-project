@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { backgroundLabel, formatHours, roleLabel, statusLabel, tagList } from "@/lib/format";
 import type { PersonRow, Tag } from "@/lib/types";
-import { Pill } from "./ui";
+import { Pill, TagPill } from "./ui";
 
 export function PeopleFilters({
   action,
@@ -97,7 +97,7 @@ export function PeopleTable({ people }: { people: PersonRow[] }) {
                 <div className="muted">{person.email}</div>
               </td>
               <td>
-                <Pill value={person.role}>{roleLabel(person.role)}</Pill>
+                <Pill kind="role" value={person.role}>{roleLabel(person.role)}</Pill>
               </td>
               <td>
                 <Pill value={person.account_status}>{statusLabel(person.account_status)}</Pill>
@@ -105,9 +105,7 @@ export function PeopleTable({ people }: { people: PersonRow[] }) {
               <td>
                 <div className="pills">
                   {tagList(person.tag_names).map((tag) => (
-                    <span className="pill" key={tag}>
-                      {tag}
-                    </span>
+                    <TagPill name={tag} key={tag} />
                   ))}
                 </div>
               </td>

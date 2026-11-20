@@ -77,7 +77,7 @@ export default async function PersonPage({
           </div>
           <label className="field">
             <span>Availability</span>
-            <input name="availability" defaultValue={person.availability} placeholder="Weekday mornings, Saturday afternoons, or weekends" />
+            <textarea className="short" name="availability" defaultValue={person.availability} placeholder="Weekday mornings, Saturday afternoons, or weekends" />
             <p className="muted">Suggested shifts use days and times named here, plus profile tags.</p>
           </label>
           <fieldset>
@@ -100,7 +100,7 @@ export default async function PersonPage({
         <p className="muted">Staff only. Don't include ID numbers.</p>
         {notes.map((note) => (
           <article className="note" key={note.id}>
-            <p>{note.body}</p>
+            <p className="copy">{note.body}</p>
             <time>
               {note.author_name} · {formatWhen(note.created_at)}
             </time>
@@ -141,6 +141,11 @@ export default async function PersonPage({
             </tbody>
           </table>
         </div>
+        {person.background_check !== "approved" ? (
+          <p className="banner warn" role="status">
+            This person has no background check. You can still record the hours.
+          </p>
+        ) : null}
         <form className="filters" action={logHoursAction}>
           <input type="hidden" name="userId" value={person.id} />
           <input type="hidden" name="returnTo" value={`/admin/people/${person.id}`} />
@@ -163,9 +168,9 @@ export default async function PersonPage({
               ))}
             </select>
           </label>
-          <label className="field grow">
+          <label className="field wide">
             <span>Note</span>
-            <input name="note" />
+            <textarea className="short" name="note" />
           </label>
           <button className="btn" type="submit">
             Record hours

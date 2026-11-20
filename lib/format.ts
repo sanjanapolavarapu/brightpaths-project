@@ -200,6 +200,12 @@ export function signupLabel(status: SignupStatus) {
   return "Attended";
 }
 
+export function emailDeliveryLabel(status: string) {
+  if (status === "sent") return "Sent";
+  if (status === "failed" || status === "skipped") return "Not sent";
+  return "Portal only";
+}
+
 export function describeFilters(filters: RecipientFilters, tags: Tag[]) {
   const parts = [
     filters.includeArchived ? "Active, inactive, and alumni" : "Active people",

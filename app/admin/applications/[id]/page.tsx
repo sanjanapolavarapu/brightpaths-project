@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Flash, PageHeader, Pill } from "@/components/ui";
+import { Flash, PageHeader, Pill, TagPill } from "@/components/ui";
 import { updateApplicationAction } from "@/lib/actions/applications";
 import { getApplication, interestIds, listTags } from "@/lib/data";
 import { applicationLabel, cadenceLabel, formatWhen, queryValue, roleLabel, volunteerAsLabel } from "@/lib/format";
@@ -34,32 +34,30 @@ export default async function ApplicationDetail({
       <Flash error={queryValue(query.error)} saved={queryValue(query.saved)} />
       <section className="card stack">
         <div className="pills">
-          <Pill value={application.role_interest}>{roleLabel(application.role_interest)}</Pill>
-          <Pill value={application.volunteer_as}>{volunteerAsLabel(application.volunteer_as)}</Pill>
-          <Pill value={application.cadence}>{cadenceLabel(application.cadence)}</Pill>
-          <Pill value={application.status}>{applicationLabel(application.status)}</Pill>
+          <Pill kind="role" value={application.role_interest}>{roleLabel(application.role_interest)}</Pill>
+          <Pill kind="meta" value={application.volunteer_as}>{volunteerAsLabel(application.volunteer_as)}</Pill>
+          <Pill kind="meta" value={application.cadence}>{cadenceLabel(application.cadence)}</Pill>
+          <Pill kind="status" value={application.status}>{applicationLabel(application.status)}</Pill>
         </div>
         <p className="muted">Submitted {formatWhen(application.submitted_at)}</p>
         <h2>Application</h2>
-        <p>
+        <p className="copy">
           <strong>Comments.</strong> {application.why_join || "None added."}
         </p>
         {application.other_help ? (
-          <p>
+          <p className="copy">
             <strong>Another way to help.</strong> {application.other_help}
           </p>
         ) : null}
-        <p>
+        <p className="copy">
           <strong>Experience.</strong> {application.experience || "None added."}
         </p>
-        <p>
+        <p className="copy">
           <strong>Availability.</strong> {application.availability}
         </p>
         <div className="pills">
           {interestNames.map((name) => (
-            <span className="pill" key={name}>
-              {name}
-            </span>
+            <TagPill name={name} key={name} />
           ))}
         </div>
       </section>

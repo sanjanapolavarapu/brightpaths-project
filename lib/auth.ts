@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from "crypto";
+import { cache } from "react";
 import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
@@ -59,7 +60,7 @@ function readSession(token: string) {
   }
 }
 
-export async function getCurrentUser() {
+export const getCurrentUser = cache(async function getCurrentUser() {
   const jar = await cookies();
   const token = jar.get(COOKIE)?.value;
   if (!token) return null;
@@ -70,7 +71,7 @@ export async function getCurrentUser() {
     plain<User>((await db.prepare(`SELECT ${USER_COLUMNS} FROM users WHERE email = $1`).get(session.email)) as Record<string, unknown> | undefined) ??
     null
   );
-}
+});
 
 export async function requireUser() {
   const user = await getCurrentUser();

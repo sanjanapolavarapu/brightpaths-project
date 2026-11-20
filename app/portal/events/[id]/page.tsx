@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { CapacityBar, Flash, PageHeader, Pill } from "@/components/ui";
+import { CapacityBar, Flash, PageHeader, Pill, TagPill, volunteerGap } from "@/components/ui";
 import { cancelSignupAction, signupAction } from "@/lib/actions/events";
 import { requireUser } from "@/lib/auth";
 import { getEvent, getSignup, qualificationIssues, tagIdsForUser } from "@/lib/data";
@@ -30,16 +30,20 @@ export default async function PortalEventPage({
         {onRoster && signup ? <Pill value={signup.status}>{signupLabel(signup.status)}</Pill> : null}
       </PageHeader>
       <Flash error={queryValue(query.error)} saved={queryValue(query.saved)} />
+      {event.status === "open" && !started && event.signed_up < event.minimum_volunteers ? (
+        <section className="need-card card stack">
+          <h2>This shift needs volunteers</h2>
+          <p className="need-gap">{volunteerGap(event.signed_up, event.minimum_volunteers)}</p>
+        </section>
+      ) : null}
       <section className="card stack">
-        <p>{event.description}</p>
+        <p className="copy">{event.description}</p>
         <p>{event.location}</p>
         <div className="pills">
           {event.tags.map((tag) => (
-            <span className="pill" key={tag.id}>
-              {tag.name}
-            </span>
+            <TagPill name={tag.name} key={tag.id} />
           ))}
-          {event.required_background_check ? <Pill value="approved">Background check required</Pill> : null}
+          {event.required_background_check ? <Pill value="pending">Background check required</Pill> : null}
         </div>
         <CapacityBar filled={event.signed_up} capacity={event.capacity} minimum={event.minimum_volunteers} />
         <p className="muted">{event.hours_credit} hours after staff mark you attended.</p>

@@ -3,7 +3,7 @@
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { applyAction } from "@/lib/actions/applications";
-import { saveEventAction } from "@/lib/actions/events";
+import { logHoursAction, saveEventAction } from "@/lib/actions/events";
 import { sendMessageAction } from "@/lib/actions/messages";
 import type { Tag } from "@/lib/types";
 
@@ -104,7 +104,7 @@ export function ApplyForm({ tags }: { tags: Tag[] }) {
       </label>
       <label className="field">
         <span>When can you usually be here?</span>
-        <input name="availability" required placeholder="Weekday mornings, Saturday afternoons, or weekends" />
+        <textarea className="short" name="availability" required placeholder="Weekday mornings, Saturday afternoons, or weekends" />
         <p className="muted">Days and time of day.</p>
       </label>
       <label className="field">
@@ -211,15 +211,34 @@ export function EventForm({
   );
 }
 
+function SendAnnouncement({ label, disabled }: { label: string; disabled: boolean }) {
+  const { pending } = useFormStatus();
+  return (
+    <button className="btn" type="submit" disabled={disabled || pending}>
+      {pending ? "Sending…" : label}
+    </button>
+  );
+}
+
 export function MessageComposer({
   filters,
   recipientCount,
+  mailReady,
+  fromEmail,
+  subject,
+  body,
 }: {
   filters: { role: string; background: boolean; archived: boolean; tagIds: number[] };
   recipientCount: number;
+  mailReady: boolean;
+  fromEmail: string;
+  subject?: string;
+  body?: string;
 }) {
   const [state, action] = useActionState(sendMessageAction, { error: "" });
   const [channel, setChannel] = useState<"email" | "sms">("email");
+  const people = `${recipientCount} ${recipientCount === 1 ? "person" : "people"}`;
+  const sendLabel = channel === "email" ? (mailReady ? "Send to portal and email" : "Save, then email") : "Save in the portal";
   return (
     <form className="stack" action={action}>
       {state.error ? <p className="banner bad">{state.error}</p> : null}
@@ -230,28 +249,84 @@ export function MessageComposer({
         <input key={id} type="hidden" name="tag" value={id} />
       ))}
       <p>
-        {recipientCount} {recipientCount === 1 ? "person" : "people"}.
+        {people} will see this in the portal.
+        {channel === "email" && mailReady ? ` Each one is also emailed from ${fromEmail}.` : null}
+        {channel === "email" && !mailReady
+          ? ` Then open the email and send it from ${fromEmail}.`
+          : null}
+        {channel === "sms" ? " Text stays in the portal. It is not sent to phones." : null}
       </p>
       <div className="checks">
         <label className="check">
           <input type="radio" name="channel" value="email" checked={channel === "email"} onChange={() => setChannel("email")} /> Email
         </label>
         <label className="check">
-          <input type="radio" name="channel" value="sms" checked={channel === "sms"} onChange={() => setChannel("sms")} /> Text
+          <input type="radio" name="channel" value="sms" checked={channel === "sms"} onChange={() => setChannel("sms")} /> Portal only
         </label>
       </div>
       {channel === "email" ? (
         <label className="field">
           <span>Subject</span>
-          <input name="subject" required />
+          <input name="subject" required maxLength={140} defaultValue={subject} />
         </label>
       ) : null}
       <label className="field">
-        <span>{channel === "sms" ? "Text (320 characters or fewer)" : "Message"}</span>
-        <textarea name="body" required maxLength={channel === "sms" ? 320 : 5000} />
+        <span>{channel === "sms" ? "Note (320 characters or fewer)" : "Announcement"}</span>
+        <textarea name="body" required maxLength={channel === "sms" ? 320 : 5000} defaultValue={body} />
       </label>
-      <button className="btn" type="submit" disabled={!recipientCount}>
-        Send
+      <SendAnnouncement label={sendLabel} disabled={!recipientCount} />
+    </form>
+  );
+}
+
+export function RecordHoursForm({
+  people,
+  eventId,
+  returnTo,
+  servedOn,
+  hours,
+}: {
+  people: { id: number; name: string; background_check: string }[];
+  eventId: number;
+  returnTo: string;
+  servedOn: string;
+  hours: number;
+}) {
+  const [userId, setUserId] = useState("");
+  const person = people.find((item) => String(item.id) === userId);
+  const missingCheck = Boolean(person && person.background_check !== "approved");
+  return (
+    <form className="filters" action={logHoursAction}>
+      <input type="hidden" name="returnTo" value={returnTo} />
+      <input type="hidden" name="eventId" value={eventId} />
+      <label className="field">
+        <span>Person</span>
+        <select name="userId" required value={userId} onChange={(event) => setUserId(event.target.value)}>
+          <option value="" disabled>
+            Choose
+          </option>
+          {people.map((item) => (
+            <option key={item.id} value={item.id}>
+              {item.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      {missingCheck ? (
+        <p className="banner warn" role="status">
+          This person has no background check. You can still record the hours.
+        </p>
+      ) : null}
+      <label className="field">
+        <span>Date</span>
+        <input type="date" name="servedOn" required defaultValue={servedOn} />
+      </label>
+      <label className="field">
+        <span>Hours</span>
+        <input type="number" name="hours" min={0.25} step={0.25} required defaultValue={hours} />
+      </label>
+      <button className="btn" type="submit">
+        Record hours
       </button>
     </form>
   );
