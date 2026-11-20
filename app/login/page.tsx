@@ -3,19 +3,10 @@ import { redirect } from "next/navigation";
 import { PublicHeader } from "@/components/public-header";
 import { Flash } from "@/components/ui";
 import { loginAction } from "@/lib/actions/session";
-import { getCurrentUser, homeFor, sampleLoginsOpen } from "@/lib/auth";
+import { getCurrentUser, homeFor } from "@/lib/auth";
 import { queryValue } from "@/lib/format";
 
 export const metadata = { title: "Sign in" };
-
-const samples = [
-  ["Staff", "staff@brightpaths.test", "Dashboard, applications, alerts"],
-  ["Volunteer", "maya@brightpaths.test", "Childcare, background check approved"],
-  ["Volunteer", "andre@brightpaths.test", "Events and community, no background check"],
-  ["Intern", "priya@brightpaths.test", "First Steps bags and the Family Resource Closet"],
-  ["Alumni", "luis@brightpaths.test", "Archived profile for a reference"],
-  ["Applicant", "hannah@brightpaths.test", "Application just submitted"],
-];
 
 export default async function LoginPage({
   searchParams,
@@ -25,14 +16,13 @@ export default async function LoginPage({
   const user = await getCurrentUser();
   if (user) redirect(homeFor(user));
   const params = await searchParams;
-  const showSamples = sampleLoginsOpen();
   return (
     <>
       <PublicHeader>
         <Link href="/apply">Apply</Link>
       </PublicHeader>
       <main className="public-main stage" id="content">
-        <div className={showSamples ? "two login-grid" : "login-grid"}>
+        <div className="login-grid">
           <section className="card stack">
             <h1>Sign in</h1>
             <Flash error={queryValue(params.error)} />
@@ -50,21 +40,6 @@ export default async function LoginPage({
               </button>
             </form>
           </section>
-          {showSamples ? (
-            <section className="card stack">
-              <h2>Sample logins</h2>
-              <p className="muted">Password: pathway</p>
-              <ul className="account-list">
-                {samples.map(([role, email, note]) => (
-                  <li key={email}>
-                    <strong>{role}</strong>
-                    <code>{email}</code>
-                    <span>{note}</span>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ) : null}
         </div>
       </main>
     </>

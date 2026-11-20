@@ -36,17 +36,4 @@ EMAIL_REPLY_TO=csears@pcaathens.org
 
 Records are in Supabase. They are not in a file in this folder.
 
-## Sample sign-in
-
-These accounts are practice data. The password for each one is `pathway`. The sample box and these emails stay off unless `SHOW_SAMPLE_LOGINS` is `1`.
-
-| Email | Who |
-| --- | --- |
-| staff@brightpaths.test | Staff dashboard |
-| maya@brightpaths.test | Volunteer, childcare, background check approved |
-| andre@brightpaths.test | Volunteer, big events, no background check |
-| priya@brightpaths.test | Intern |
-| luis@brightpaths.test | Alumni profile |
-| hannah@brightpaths.test | New application |
-
-The practice people, shifts, applications, hours, and messages should be removed in Supabase before real volunteers use the site. The portal has no delete button. Marking someone Inactive only hides them.
+The sign-in page does not list practice accounts. A fresh empty database still creates practice people for local development, and those addresses end in `.test`. Remove them in Supabase before real volunteers use the site. The portal has no delete button. Marking someone Inactive only hides them.
